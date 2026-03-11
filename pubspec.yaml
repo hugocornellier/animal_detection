@@ -28,6 +28,7 @@ flutter:
     - assets/models/superanimal_rtmpose_s_float16.tflite
     - assets/models/species_classifier_float16.tflite
     - assets/models/species_mapping.json
+    - assets/samples/
 
   plugin:
     platforms:
