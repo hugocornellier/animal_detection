@@ -46,5 +46,20 @@ export 'src/dart_registration.dart';
 
 // Re-export cv.Mat for users who want to use detectFromMat directly
 export 'package:opencv_dart/opencv_dart.dart' show Mat, imdecode, IMREAD_COLOR;
+export 'src/util/image_utils.dart' show ImageUtils;
 export 'package:flutter_litert/flutter_litert.dart'
-    show PerformanceMode, PerformanceConfig;
+    show
+        PerformanceMode,
+        PerformanceConfig,
+        BoundingBox,
+        Point,
+        LetterboxParams,
+        computeLetterboxParams,
+        scaleFromLetterbox;
+export 'src/models/face_localizer_model.dart' show FaceLocalizerModel;
+export 'src/models/landmark_model_runner.dart' show LandmarkModelRunnerBase;
+export 'src/models/ensemble_landmark_model.dart'
+    show EnsembleLandmarkModelBase, EnsembleModelGetter;
+export 'src/util/species_model_downloader.dart' show SpeciesModelDownloader;
+export 'src/models/single_interpreter_model.dart' show SingleInterpreterModel;
+export 'src/util/math_utils.dart' show softmaxConfidence, argmaxSoftmax;

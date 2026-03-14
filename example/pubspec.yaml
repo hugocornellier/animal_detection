@@ -1,0 +1,28 @@
+name: animal_detection_example
+description: Animal detection example app
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  animal_detection:
+    path: ../
+  image_picker: ^1.2.1
+  file_selector: ^1.0.1
+  opencv_dart: 2.2.1+4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - integration_test/test_images/

@@ -3,10 +3,10 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/flutter_litert.dart';
-import '../types.dart';
 import '../util/image_utils.dart';
 import '../util/nms.dart';
 import 'ssd_anchors.dart' show ssdAnchors;
+import 'single_interpreter_model.dart';
 
 /// SSDLite body detection model runner.
 ///
@@ -14,7 +14,7 @@ import 'ssd_anchors.dart' show ssdAnchors;
 /// Input: 320x320, ImageNet-normalized. Output: 12 tensors (6 reg + 6 cls),
 /// one pair per SSD feature level. Returns bounding boxes in original image
 /// pixel coordinates, sorted by score descending.
-class AnimalBodyDetector {
+class AnimalBodyDetector extends SingleInterpreterModel {
   /// Input spatial dimension for the detector model (320x320).
   static const int inputSize = 320;
 
@@ -48,25 +48,20 @@ class AnimalBodyDetector {
 
   static const int _anchorsPerLoc = 6;
 
-  Interpreter? _interpreter;
-  IsolateInterpreter? _isolateInterpreter;
-  Delegate? _delegate;
-
   late List<List<List<List<double>>>> _inputTensor;
   late Map<int, Object> _outputBuffers;
+  late List<List<int>> _outputTensorShapes;
   Float32List? _rgbBuffer;
 
   /// Initializes the detector by loading the TFLite model from Flutter assets.
   Future<void> initialize(PerformanceConfig performanceConfig) async {
-    final (options, delegate) = InterpreterFactory.create(performanceConfig);
-    _delegate = delegate;
-    _interpreter = await Interpreter.fromAsset(_modelPath, options: options);
-    _isolateInterpreter = await InterpreterFactory.createIsolateIfNeeded(
-      _interpreter!,
-      _delegate,
-    );
+    await initInterpreterFromAsset(_modelPath, performanceConfig);
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
-    _outputBuffers = _allocateOutputBuffers(_interpreter!);
+    _outputBuffers = createOutputBuffers(
+      interpreter!.getOutputTensors().map((t) => t.shape).toList(),
+    );
+    _outputTensorShapes =
+        interpreter!.getOutputTensors().map((t) => t.shape).toList();
   }
 
   /// Initializes the detector from pre-loaded model bytes.
@@ -74,25 +69,13 @@ class AnimalBodyDetector {
     Uint8List bytes,
     PerformanceConfig performanceConfig,
   ) async {
-    final (options, delegate) = InterpreterFactory.create(performanceConfig);
-    _delegate = delegate;
-    _interpreter = Interpreter.fromBuffer(bytes, options: options);
-    _isolateInterpreter = await InterpreterFactory.createIsolateIfNeeded(
-      _interpreter!,
-      _delegate,
-    );
+    await initInterpreterFromBuffer(bytes, performanceConfig);
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
-    _outputBuffers = _allocateOutputBuffers(_interpreter!);
-  }
-
-  /// Allocates output buffers for all 12 output tensors based on their shapes.
-  Map<int, Object> _allocateOutputBuffers(Interpreter interpreter) {
-    final outputTensors = interpreter.getOutputTensors();
-    final buffers = <int, Object>{};
-    for (int i = 0; i < outputTensors.length; i++) {
-      buffers[i] = allocTensorShape(outputTensors[i].shape);
-    }
-    return buffers;
+    _outputBuffers = createOutputBuffers(
+      interpreter!.getOutputTensors().map((t) => t.shape).toList(),
+    );
+    _outputTensorShapes =
+        interpreter!.getOutputTensors().map((t) => t.shape).toList();
   }
 
   /// Detect animals in [image].
@@ -117,21 +100,13 @@ class AnimalBodyDetector {
     fillNHWC4D(_rgbBuffer!, _inputTensor, inputSize, inputSize);
 
     // 2. Run inference.
-    if (_isolateInterpreter != null) {
-      await _isolateInterpreter!.runForMultipleInputs(
-        [_inputTensor],
-        _outputBuffers,
-      );
-    } else {
-      _interpreter!.runForMultipleInputs([_inputTensor], _outputBuffers);
-    }
+    await runInference([_inputTensor], _outputBuffers);
 
     // 3. Group outputs by (H, W), identify reg (C=24) vs cls (C=12).
     final byHW = <(int, int), _LevelOutputs>{};
-    final outputTensors = _interpreter!.getOutputTensors();
 
-    for (int i = 0; i < outputTensors.length; i++) {
-      final shape = outputTensors[i].shape;
+    for (int i = 0; i < _outputTensorShapes.length; i++) {
+      final shape = _outputTensorShapes[i];
       // Shape is [1, H, W, C]
       final int h = shape[1];
       final int w = shape[2];
@@ -236,11 +211,11 @@ class AnimalBodyDetector {
     final results = <(BoundingBox, double)>[];
     for (final i in keptIndices) {
       results.add((
-        BoundingBox(
-          left: boxesOrig[i * 4 + 0],
-          top: boxesOrig[i * 4 + 1],
-          right: boxesOrig[i * 4 + 2],
-          bottom: boxesOrig[i * 4 + 3],
+        BoundingBox.ltrb(
+          boxesOrig[i * 4 + 0],
+          boxesOrig[i * 4 + 1],
+          boxesOrig[i * 4 + 2],
+          boxesOrig[i * 4 + 3],
         ),
         scores[i],
       ));
@@ -283,13 +258,6 @@ class AnimalBodyDetector {
     }
 
     return decoded;
-  }
-
-  /// Disposes the interpreter and releases native resources.
-  void dispose() {
-    _isolateInterpreter?.close();
-    _interpreter?.close();
-    _delegate?.delete();
   }
 }
 

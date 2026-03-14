@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'types.dart';
+import 'util/image_utils.dart';
 import 'util/model_downloader.dart';
 import 'models/animal_body_detector.dart';
 import 'models/species_classifier.dart';
@@ -77,8 +78,7 @@ class AnimalDetector {
       if (poseModel == AnimalPoseModel.hrnet) {
         final hrnetBytes = await ModelDownloader.getHrnetModel(
           onProgress: onDownloadProgress != null
-              ? (r, t) =>
-                  onDownloadProgress(ModelDownloader.modelHrnet, r, t)
+              ? (r, t) => onDownloadProgress(ModelDownloader.modelHrnet, r, t)
               : null,
         );
         await _poseEstimator!
@@ -230,7 +230,7 @@ class AnimalDetector {
 
       // Stage 3: body pose estimation on the expanded crop
       if (enablePose && _poseEstimator != null) {
-        final (cx1, cy1, cx2, cy2) = _expandBox(
+        final (cx1, cy1, cx2, cy2) = ImageUtils.expandBox(
           bbox.left,
           bbox.top,
           bbox.right,
@@ -269,25 +269,5 @@ class AnimalDetector {
     }
 
     return animals;
-  }
-
-  /// Expands a bounding box by [margin] fraction on each side, clamped to image bounds.
-  static (int, int, int, int) _expandBox(
-    double x1,
-    double y1,
-    double x2,
-    double y2,
-    double margin,
-    int imgW,
-    int imgH,
-  ) {
-    final bw = x2 - x1;
-    final bh = y2 - y1;
-    return (
-      (x1 - bw * margin).clamp(0, imgW).toInt(),
-      (y1 - bh * margin).clamp(0, imgH).toInt(),
-      (x2 + bw * margin).clamp(0, imgW).toInt(),
-      (y2 + bh * margin).clamp(0, imgH).toInt(),
-    );
   }
 }

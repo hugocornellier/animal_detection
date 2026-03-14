@@ -105,4 +105,26 @@ class ImageUtils {
     padded.dispose();
     return (normalized, params);
   }
+
+  /// Expands a bounding box by [margin] fraction on each side, clamped to image bounds.
+  ///
+  /// Returns (x1, y1, x2, y2) as integers.
+  static (int, int, int, int) expandBox(
+    double x1,
+    double y1,
+    double x2,
+    double y2,
+    double margin,
+    int imgW,
+    int imgH,
+  ) {
+    final bw = x2 - x1;
+    final bh = y2 - y1;
+    return (
+      (x1 - bw * margin).clamp(0, imgW).toInt(),
+      (y1 - bh * margin).clamp(0, imgH).toInt(),
+      (x2 + bw * margin).clamp(0, imgW).toInt(),
+      (y2 + bh * margin).clamp(0, imgH).toInt(),
+    );
+  }
 }

@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/flutter_litert.dart';
 import '../types.dart';
 import '../util/image_utils.dart';
+import '../util/math_utils.dart';
+import 'single_interpreter_model.dart';
 
 /// SuperAnimal body pose estimator supporting RTMPose-S (SimCC) and HRNet-w32 (heatmap).
 ///
@@ -14,7 +15,7 @@ import '../util/image_utils.dart';
 /// Both models take a 256x256 ImageNet-normalized letterboxed crop as input
 /// and output 39 SuperAnimal keypoints. Only body keypoints 15-38 are exposed
 /// as [AnimalPoseLandmarkType] values.
-class BodyPoseEstimator {
+class BodyPoseEstimator extends SingleInterpreterModel {
   /// Input spatial dimension for both pose models (256x256).
   static const int inputSize = 256;
 
@@ -29,10 +30,6 @@ class BodyPoseEstimator {
 
   /// The pose model variant this estimator is configured for.
   final AnimalPoseModel model;
-
-  Interpreter? _interpreter;
-  IsolateInterpreter? _isolateInterpreter;
-  Delegate? _delegate;
 
   late List<List<List<List<double>>>> _inputTensor;
 
@@ -59,13 +56,7 @@ class BodyPoseEstimator {
         'Use initializeFromBuffer() with bytes from ModelDownloader.',
       );
     }
-    final (options, delegate) = InterpreterFactory.create(performanceConfig);
-    _delegate = delegate;
-    _interpreter = await Interpreter.fromAsset(_rtmposePath, options: options);
-    _isolateInterpreter = await InterpreterFactory.createIsolateIfNeeded(
-      _interpreter!,
-      _delegate,
-    );
+    await initInterpreterFromAsset(_rtmposePath, performanceConfig);
     _allocBuffers();
   }
 
@@ -74,13 +65,7 @@ class BodyPoseEstimator {
     Uint8List bytes,
     PerformanceConfig performanceConfig,
   ) async {
-    final (options, delegate) = InterpreterFactory.create(performanceConfig);
-    _delegate = delegate;
-    _interpreter = Interpreter.fromBuffer(bytes, options: options);
-    _isolateInterpreter = await InterpreterFactory.createIsolateIfNeeded(
-      _interpreter!,
-      _delegate,
-    );
+    await initInterpreterFromBuffer(bytes, performanceConfig);
     _allocBuffers();
   }
 
@@ -152,11 +137,7 @@ class BodyPoseEstimator {
   Future<List<({double x, double y, double confidence})>> _runRTMPose() async {
     final outputs = <int, Object>{0: _simccX, 1: _simccY};
 
-    if (_isolateInterpreter != null) {
-      await _isolateInterpreter!.runForMultipleInputs([_inputTensor], outputs);
-    } else {
-      _interpreter!.runForMultipleInputs([_inputTensor], outputs);
-    }
+    await runInference([_inputTensor], outputs);
 
     final result = <({double x, double y, double confidence})>[];
     for (int kp = 0; kp < _numKeypoints; kp++) {
@@ -184,8 +165,8 @@ class BodyPoseEstimator {
       final double yPixel = yArgmax / _simccSplitRatio;
 
       // softmax confidence = max(softmax(simcc_x[kp])) * max(softmax(simcc_y[kp]))
-      final double xConf = _softmaxMax(xRow, xArgmax);
-      final double yConf = _softmaxMax(yRow, yArgmax);
+      final double xConf = softmaxConfidence(xRow, xArgmax);
+      final double yConf = softmaxConfidence(yRow, yArgmax);
       final double confidence = xConf * yConf;
 
       result.add((x: xPixel, y: yPixel, confidence: confidence));
@@ -196,11 +177,7 @@ class BodyPoseEstimator {
   Future<List<({double x, double y, double confidence})>> _runHRNet() async {
     final outputs = <int, Object>{0: _heatmapBuffer};
 
-    if (_isolateInterpreter != null) {
-      await _isolateInterpreter!.runForMultipleInputs([_inputTensor], outputs);
-    } else {
-      _interpreter!.runForMultipleInputs([_inputTensor], outputs);
-    }
+    await runInference([_inputTensor], outputs);
 
     final double scale = inputSize / _heatmapSize.toDouble(); // 4.0
 
@@ -227,25 +204,5 @@ class BodyPoseEstimator {
       result.add((x: xPixel, y: yPixel, confidence: bestVal));
     }
     return result;
-  }
-
-  /// Computes max(softmax(logits)) at [peakIndex] efficiently.
-  double _softmaxMax(List<double> logits, int peakIndex) {
-    double maxLogit = logits[0];
-    for (int i = 1; i < logits.length; i++) {
-      if (logits[i] > maxLogit) maxLogit = logits[i];
-    }
-    double sumExp = 0.0;
-    for (int i = 0; i < logits.length; i++) {
-      sumExp += math.exp(logits[i] - maxLogit);
-    }
-    return math.exp(logits[peakIndex] - maxLogit) / sumExp;
-  }
-
-  /// Disposes the interpreter and releases native resources.
-  void dispose() {
-    _isolateInterpreter?.close();
-    _interpreter?.close();
-    _delegate?.delete();
   }
 }

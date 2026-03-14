@@ -1,3 +1,4 @@
+import 'package:flutter_litert/flutter_litert.dart' show BoundingBox;
 export 'package:flutter_litert/flutter_litert.dart'
     show PerformanceMode, PerformanceConfig;
 
@@ -100,59 +101,6 @@ enum AnimalPoseLandmarkType {
 
   /// Left side of the body middle (SuperAnimal index 38).
   bodyMiddleLeft,
-}
-
-/// 2D integer pixel coordinate.
-class Point {
-  /// X coordinate in pixels
-  final int x;
-
-  /// Y coordinate in pixels
-  final int y;
-
-  /// Creates a 2D pixel coordinate at position ([x], [y]).
-  Point(this.x, this.y);
-}
-
-/// Axis-aligned bounding box in pixel coordinates.
-///
-/// Coordinates are in the original image space (not normalized).
-class BoundingBox {
-  /// Left edge x-coordinate in pixels
-  final double left;
-
-  /// Top edge y-coordinate in pixels
-  final double top;
-
-  /// Right edge x-coordinate in pixels
-  final double right;
-
-  /// Bottom edge y-coordinate in pixels
-  final double bottom;
-
-  /// Creates an axis-aligned bounding box with the specified edges.
-  const BoundingBox({
-    required this.left,
-    required this.top,
-    required this.right,
-    required this.bottom,
-  });
-
-  /// Serializes this bounding box to a map for cross-isolate transfer.
-  Map<String, dynamic> toMap() => {
-        'left': left,
-        'top': top,
-        'right': right,
-        'bottom': bottom,
-      };
-
-  /// Deserializes a bounding box from a map.
-  static BoundingBox fromMap(Map<String, dynamic> map) => BoundingBox(
-        left: (map['left'] as num).toDouble(),
-        top: (map['top'] as num).toDouble(),
-        right: (map['right'] as num).toDouble(),
-        bottom: (map['bottom'] as num).toDouble(),
-      );
 }
 
 /// A single body pose keypoint with 2D coordinates and a confidence score.
@@ -312,7 +260,12 @@ class Animal {
 
   /// Serializes this result to a map for cross-isolate transfer.
   Map<String, dynamic> toMap() => {
-        'boundingBox': boundingBox.toMap(),
+        'boundingBox': {
+          'left': boundingBox.left,
+          'top': boundingBox.top,
+          'right': boundingBox.right,
+          'bottom': boundingBox.bottom
+        },
         'score': score,
         'species': species,
         'breed': breed,
@@ -324,8 +277,12 @@ class Animal {
 
   /// Deserializes an animal detection result from a map.
   static Animal fromMap(Map<String, dynamic> map) => Animal(
-        boundingBox:
-            BoundingBox.fromMap(map['boundingBox'] as Map<String, dynamic>),
+        boundingBox: BoundingBox.ltrb(
+          (map['boundingBox']['left'] as num).toDouble(),
+          (map['boundingBox']['top'] as num).toDouble(),
+          (map['boundingBox']['right'] as num).toDouble(),
+          (map['boundingBox']['bottom'] as num).toDouble(),
+        ),
         score: (map['score'] as num).toDouble(),
         species: map['species'] as String?,
         breed: map['breed'] as String?,
