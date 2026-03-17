@@ -1,3 +1,7 @@
+## 0.0.4
+
+* Add macOS Swift Package Manager support.
+
 ## 0.0.3
 
 * Add shared face detection infrastructure for species-specific packages
