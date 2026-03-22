@@ -29,8 +29,15 @@ class FaceLocalizerModel extends SingleInterpreterModel {
   }) : _modelPath = modelPath;
 
   /// Initializes the model from Flutter assets.
-  Future<void> initialize(PerformanceConfig performanceConfig) async {
-    await initInterpreterFromAsset(_modelPath, performanceConfig);
+  Future<void> initialize(
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
+    await initInterpreterFromAsset(
+      _modelPath,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
     _outputBuffer = List.generate(1, (_) => List.filled(4, 0.0));
   }
@@ -38,9 +45,14 @@ class FaceLocalizerModel extends SingleInterpreterModel {
   /// Initializes the model from pre-loaded bytes (for isolate use).
   Future<void> initializeFromBuffer(
     Uint8List bytes,
-    PerformanceConfig performanceConfig,
-  ) async {
-    await initInterpreterFromBuffer(bytes, performanceConfig);
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
+    await initInterpreterFromBuffer(
+      bytes,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
     _outputBuffer = List.generate(1, (_) => List.filled(4, 0.0));
   }

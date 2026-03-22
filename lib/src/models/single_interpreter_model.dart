@@ -17,28 +17,32 @@ abstract class SingleInterpreterModel {
   /// Initializes the interpreter from a Flutter asset path.
   Future<void> initInterpreterFromAsset(
     String assetPath,
-    PerformanceConfig config,
-  ) async {
+    PerformanceConfig config, {
+    bool useIsolateInterpreter = true,
+  }) async {
     final (options, delegate) = InterpreterFactory.create(config);
     _delegate = delegate;
     _interpreter = await Interpreter.fromAsset(assetPath, options: options);
     _isolateInterpreter = await InterpreterFactory.createIsolateIfNeeded(
       _interpreter!,
       _delegate,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
   }
 
   /// Initializes the interpreter from pre-loaded model bytes.
   Future<void> initInterpreterFromBuffer(
     Uint8List bytes,
-    PerformanceConfig config,
-  ) async {
+    PerformanceConfig config, {
+    bool useIsolateInterpreter = true,
+  }) async {
     final (options, delegate) = InterpreterFactory.create(config);
     _delegate = delegate;
     _interpreter = Interpreter.fromBuffer(bytes, options: options);
     _isolateInterpreter = await InterpreterFactory.createIsolateIfNeeded(
       _interpreter!,
       _delegate,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
   }
 

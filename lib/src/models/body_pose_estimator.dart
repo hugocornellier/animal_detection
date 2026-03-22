@@ -49,23 +49,35 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   ///
   /// Only valid for [AnimalPoseModel.rtmpose]. For [AnimalPoseModel.hrnet], the model
   /// bytes must be provided via [initializeFromBuffer].
-  Future<void> initialize(PerformanceConfig performanceConfig) async {
+  Future<void> initialize(
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
     if (model == AnimalPoseModel.hrnet) {
       throw StateError(
         'HRNet requires a downloaded model. '
         'Use initializeFromBuffer() with bytes from ModelDownloader.',
       );
     }
-    await initInterpreterFromAsset(_rtmposePath, performanceConfig);
+    await initInterpreterFromAsset(
+      _rtmposePath,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _allocBuffers();
   }
 
   /// Initializes the estimator from pre-loaded model bytes.
   Future<void> initializeFromBuffer(
     Uint8List bytes,
-    PerformanceConfig performanceConfig,
-  ) async {
-    await initInterpreterFromBuffer(bytes, performanceConfig);
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
+    await initInterpreterFromBuffer(
+      bytes,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _allocBuffers();
   }
 

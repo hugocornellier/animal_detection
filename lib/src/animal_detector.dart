@@ -62,16 +62,23 @@ class AnimalDetector {
   /// (modelName, bytesReceived, totalBytes).
   Future<void> initialize({
     void Function(String model, int received, int total)? onDownloadProgress,
+    bool useIsolateInterpreter = true,
   }) async {
     if (_isInitialized) {
       await dispose();
     }
 
     _bodyDetector = AnimalBodyDetector();
-    await _bodyDetector!.initialize(performanceConfig);
+    await _bodyDetector!.initialize(
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
 
     _classifier = SpeciesClassifier();
-    await _classifier!.initialize(performanceConfig);
+    await _classifier!.initialize(
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
 
     if (enablePose) {
       _poseEstimator = BodyPoseEstimator(model: poseModel);
@@ -81,10 +88,16 @@ class AnimalDetector {
               ? (r, t) => onDownloadProgress(ModelDownloader.modelHrnet, r, t)
               : null,
         );
-        await _poseEstimator!
-            .initializeFromBuffer(hrnetBytes, performanceConfig);
+        await _poseEstimator!.initializeFromBuffer(
+          hrnetBytes,
+          performanceConfig,
+          useIsolateInterpreter: useIsolateInterpreter,
+        );
       } else {
-        await _poseEstimator!.initialize(performanceConfig);
+        await _poseEstimator!.initialize(
+          performanceConfig,
+          useIsolateInterpreter: useIsolateInterpreter,
+        );
       }
     }
 
@@ -100,6 +113,7 @@ class AnimalDetector {
     required Uint8List classifierBytes,
     required String speciesMappingJson,
     Uint8List? poseModelBytes,
+    bool useIsolateInterpreter = true,
   }) async {
     if (_isInitialized) {
       await dispose();
@@ -109,6 +123,7 @@ class AnimalDetector {
     await _bodyDetector!.initializeFromBuffer(
       bodyDetectorBytes,
       performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
 
     _classifier = SpeciesClassifier();
@@ -116,12 +131,16 @@ class AnimalDetector {
       classifierBytes,
       speciesMappingJson,
       performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
 
     if (enablePose && poseModelBytes != null) {
       _poseEstimator = BodyPoseEstimator(model: poseModel);
-      await _poseEstimator!
-          .initializeFromBuffer(poseModelBytes, performanceConfig);
+      await _poseEstimator!.initializeFromBuffer(
+        poseModelBytes,
+        performanceConfig,
+        useIsolateInterpreter: useIsolateInterpreter,
+      );
     }
 
     _isInitialized = true;

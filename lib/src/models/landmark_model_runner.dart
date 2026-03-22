@@ -35,7 +35,10 @@ class LandmarkModelRunnerBase {
   }) : _pool = InterpreterPool(poolSize: poolSize);
 
   /// Initializes the model from Flutter assets.
-  Future<void> initialize(PerformanceConfig performanceConfig) async {
+  Future<void> initialize(
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
     final path = modelPath;
     await _pool.initialize(
       (options, _) async {
@@ -45,14 +48,16 @@ class LandmarkModelRunnerBase {
         return interpreter;
       },
       performanceConfig: performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
   }
 
   /// Initializes the model from pre-loaded bytes (for isolate use).
   Future<void> initializeFromBuffer(
     Uint8List bytes,
-    PerformanceConfig performanceConfig,
-  ) async {
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
     await _pool.initialize(
       (options, _) async {
         final interpreter = Interpreter.fromBuffer(bytes, options: options);
@@ -61,6 +66,7 @@ class LandmarkModelRunnerBase {
         return interpreter;
       },
       performanceConfig: performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
   }
 

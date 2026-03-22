@@ -59,6 +59,7 @@ class EnsembleLandmarkModelBase {
   Future<void> initialize(
     PerformanceConfig performanceConfig, {
     void Function(String model, int received, int total)? onDownloadProgress,
+    bool useIsolateInterpreter = true,
   }) async {
     final (bytes256, bytes320) = await getEnsembleModels(
       onProgress: onDownloadProgress,
@@ -72,6 +73,7 @@ class EnsembleLandmarkModelBase {
       bytes320: bytes320,
       bytes384: bytes384,
       performanceConfig: performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
   }
 
@@ -81,12 +83,14 @@ class EnsembleLandmarkModelBase {
     required Uint8List bytes320,
     required Uint8List bytes384,
     required PerformanceConfig performanceConfig,
+    bool useIsolateInterpreter = true,
   }) async {
     await _initializeFromBytes(
       bytes256: bytes256,
       bytes320: bytes320,
       bytes384: bytes384,
       performanceConfig: performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
   }
 
@@ -95,15 +99,19 @@ class EnsembleLandmarkModelBase {
     required Uint8List bytes320,
     required Uint8List bytes384,
     required PerformanceConfig performanceConfig,
+    bool useIsolateInterpreter = true,
   }) async {
     _pool256 = InterpreterPool(poolSize: _poolSize);
     _pool320 = InterpreterPool(poolSize: _poolSize);
     _pool384 = InterpreterPool(poolSize: _poolSize);
 
     await Future.wait([
-      _initPool(_pool256!, bytes256, _size256, performanceConfig),
-      _initPool(_pool320!, bytes320, _size320, performanceConfig),
-      _initPool(_pool384!, bytes384, _size384, performanceConfig),
+      _initPool(_pool256!, bytes256, _size256, performanceConfig,
+          useIsolateInterpreter: useIsolateInterpreter),
+      _initPool(_pool320!, bytes320, _size320, performanceConfig,
+          useIsolateInterpreter: useIsolateInterpreter),
+      _initPool(_pool384!, bytes384, _size384, performanceConfig,
+          useIsolateInterpreter: useIsolateInterpreter),
     ]);
   }
 
@@ -111,8 +119,9 @@ class EnsembleLandmarkModelBase {
     InterpreterPool pool,
     Uint8List bytes,
     int inputSize,
-    PerformanceConfig config,
-  ) async {
+    PerformanceConfig config, {
+    bool useIsolateInterpreter = true,
+  }) async {
     await pool.initialize(
       (options, _) async {
         final interpreter = Interpreter.fromBuffer(bytes, options: options);
@@ -121,6 +130,7 @@ class EnsembleLandmarkModelBase {
         return interpreter;
       },
       performanceConfig: config,
+      useIsolateInterpreter: useIsolateInterpreter,
     );
   }
 

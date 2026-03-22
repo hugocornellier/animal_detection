@@ -31,8 +31,15 @@ class SpeciesClassifier extends SingleInterpreterModel {
 
   /// Initializes the classifier by loading the TFLite model and species mapping
   /// from Flutter assets.
-  Future<void> initialize(PerformanceConfig performanceConfig) async {
-    await initInterpreterFromAsset(_modelPath, performanceConfig);
+  Future<void> initialize(
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
+    await initInterpreterFromAsset(
+      _modelPath,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
     _outputBuffer = List.generate(1, (_) => List.filled(1000, 0.0));
 
@@ -44,9 +51,14 @@ class SpeciesClassifier extends SingleInterpreterModel {
   Future<void> initializeFromBuffer(
     Uint8List modelBytes,
     String mappingJson,
-    PerformanceConfig performanceConfig,
-  ) async {
-    await initInterpreterFromBuffer(modelBytes, performanceConfig);
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
+    await initInterpreterFromBuffer(
+      modelBytes,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
     _outputBuffer = List.generate(1, (_) => List.filled(1000, 0.0));
 

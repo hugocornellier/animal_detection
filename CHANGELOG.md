@@ -1,3 +1,7 @@
+## 0.0.5
+
+* Propagate useIsolateInterpreter flag through model initialization
+
 ## 0.0.4
 
 * Add macOS Swift Package Manager support.

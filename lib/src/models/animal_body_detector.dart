@@ -54,8 +54,15 @@ class AnimalBodyDetector extends SingleInterpreterModel {
   Float32List? _rgbBuffer;
 
   /// Initializes the detector by loading the TFLite model from Flutter assets.
-  Future<void> initialize(PerformanceConfig performanceConfig) async {
-    await initInterpreterFromAsset(_modelPath, performanceConfig);
+  Future<void> initialize(
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
+    await initInterpreterFromAsset(
+      _modelPath,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
     _outputBuffers = createOutputBuffers(
       interpreter!.getOutputTensors().map((t) => t.shape).toList(),
@@ -67,9 +74,14 @@ class AnimalBodyDetector extends SingleInterpreterModel {
   /// Initializes the detector from pre-loaded model bytes.
   Future<void> initializeFromBuffer(
     Uint8List bytes,
-    PerformanceConfig performanceConfig,
-  ) async {
-    await initInterpreterFromBuffer(bytes, performanceConfig);
+    PerformanceConfig performanceConfig, {
+    bool useIsolateInterpreter = true,
+  }) async {
+    await initInterpreterFromBuffer(
+      bytes,
+      performanceConfig,
+      useIsolateInterpreter: useIsolateInterpreter,
+    );
     _inputTensor = createNHWCTensor4D(inputSize, inputSize);
     _outputBuffers = createOutputBuffers(
       interpreter!.getOutputTensors().map((t) => t.shape).toList(),
