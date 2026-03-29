@@ -38,6 +38,11 @@ class AnimalDetector {
   final double detThreshold;
 
   /// Performance configuration for TensorFlow Lite inference.
+  ///
+  /// By default, auto mode selects the optimal delegate per platform:
+  /// - macOS/Linux/Windows: XNNPACK (2-5x CPU speedup)
+  /// - iOS: Metal GPU delegate
+  /// - Android: CPU-only (for stability)
   final PerformanceConfig performanceConfig;
 
   bool _isInitialized = false;
@@ -48,7 +53,7 @@ class AnimalDetector {
     this.enablePose = true,
     this.cropMargin = 0.20,
     this.detThreshold = 0.5,
-    this.performanceConfig = PerformanceConfig.disabled,
+    this.performanceConfig = const PerformanceConfig(),
   });
 
   /// Initializes the detector by loading TensorFlow Lite models.
