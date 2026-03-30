@@ -1,3 +1,16 @@
+## 0.0.8
+
+* Update documentation
+
+## 0.0.7
+
+* Update flutter_litert 2.0.8 -> 2.0.10
+
+## 0.0.6
+
+* Enable auto hardware acceleration by default (XNNPACK on all native platforms, Metal GPU on iOS)
+* Update flutter_litert 2.0.6 -> 2.0.8
+
 ## 0.0.5
 
 * Propagate useIsolateInterpreter flag through model initialization
