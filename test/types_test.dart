@@ -32,7 +32,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // AnimalPoseLandmarkType enum — 24 values, SuperAnimal topology
+  // AnimalPoseLandmarkType enum, 24 values, SuperAnimal topology
   // ---------------------------------------------------------------------------
   group('AnimalPoseLandmarkType enum', () {
     test('has exactly 24 values', () {

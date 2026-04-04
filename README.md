@@ -135,12 +135,12 @@ The package automatically selects the best acceleration strategy for each platfo
 | **Android** | XNNPACK | 2-5x | ARM NEON SIMD acceleration |
 | **Windows** | XNNPACK | 2-5x | SIMD vectorization (AVX on x86) |
 
-No configuration needed - just call `initialize()` and you get the optimal performance for your platform.
+No configuration needed, just call `initialize()` and you get the optimal performance for your platform.
 
 ### Advanced Performance Configuration
 
 ```dart
-// Auto mode (default) - optimal for each platform
+// Auto mode (default), optimal for each platform
 await detector.initialize();
 
 // Force XNNPACK (all native platforms)

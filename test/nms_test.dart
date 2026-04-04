@@ -122,7 +122,7 @@ void main() {
     });
 
     test('boxes touching at edge have IoU 0 and are both kept', () {
-      // Box A: [0, 0, 10, 10], Box B: [10, 0, 20, 10] — share an edge, IoU = 0
+      // Box A: [0, 0, 10, 10], Box B: [10, 0, 20, 10], share an edge, IoU = 0
       final result = nonMaxSuppression(
         boxes: makeBoxes([
           [0.0, 0.0, 10.0, 10.0],
@@ -174,7 +174,7 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // Partial overlap — IoU threshold behavior
+  // Partial overlap, IoU threshold behavior
   // ---------------------------------------------------------------------------
   group('partial overlap IoU threshold', () {
     // Box A: [0,0,10,10] area=100
@@ -259,7 +259,7 @@ void main() {
         scoreThreshold: 0.3,
       );
       expect(result.length, 3);
-      expect(result[0], 1); // 0.95 — highest
+      expect(result[0], 1); // 0.95, highest
       expect(result[1], 2); // 0.70
       expect(result[2], 0); // 0.40
     });
@@ -312,10 +312,10 @@ void main() {
         () {
       final result = nonMaxSuppression(
         boxes: makeBoxes([
-          [0.0, 0.0, 10.0, 10.0], // score 0.1 — below threshold
-          [50.0, 50.0, 60.0, 60.0], // score 0.9 — kept
-          [51.0, 51.0, 61.0, 61.0], // score 0.8 — suppressed by box 1
-          [200.0, 200.0, 210.0, 210.0], // score 0.7 — kept (no overlap)
+          [0.0, 0.0, 10.0, 10.0], // score 0.1, below threshold
+          [50.0, 50.0, 60.0, 60.0], // score 0.9, kept
+          [51.0, 51.0, 61.0, 61.0], // score 0.8, suppressed by box 1
+          [200.0, 200.0, 210.0, 210.0], // score 0.7, kept (no overlap)
         ]),
         scores: makeScores([0.1, 0.9, 0.8, 0.7]),
         iouThreshold: 0.3,
@@ -336,9 +336,9 @@ void main() {
       final result = nonMaxSuppression(
         boxes: makeBoxes([
           [0.0, 0.0, 10.0, 10.0], // cluster A, score 0.9
-          [1.0, 0.0, 11.0, 10.0], // cluster A, score 0.8 — suppressed
+          [1.0, 0.0, 11.0, 10.0], // cluster A, score 0.8, suppressed
           [500.0, 0.0, 510.0, 10.0], // cluster B, score 0.85
-          [501.0, 0.0, 511.0, 10.0], // cluster B, score 0.6 — suppressed
+          [501.0, 0.0, 511.0, 10.0], // cluster B, score 0.6, suppressed
         ]),
         scores: makeScores([0.9, 0.8, 0.85, 0.6]),
         iouThreshold: 0.3,
@@ -360,7 +360,7 @@ void main() {
         ]),
         scores: makeScores([0.9, 0.8, 0.7]),
         iouThreshold:
-            0.99, // very high threshold — boxes must nearly perfectly overlap
+            0.99, // very high threshold, boxes must nearly perfectly overlap
         scoreThreshold: 0.3,
       );
       // IoU between adjacent shifted boxes is well below 0.99, so all kept
@@ -375,7 +375,7 @@ void main() {
           [2.0, 2.0, 12.0, 12.0],
         ]),
         scores: makeScores([0.9, 0.8, 0.7]),
-        iouThreshold: 0.01, // very low — any overlap triggers suppression
+        iouThreshold: 0.01, // very low, any overlap triggers suppression
         scoreThreshold: 0.3,
       );
       // All three overlap each other slightly, so only the highest-score is kept

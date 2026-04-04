@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'animal_detection'
-  s.version          = '0.0.1'
+  s.version          = '1.0.0'
   s.summary          = 'On-device animal detection, species classification, and body pose estimation.'
   s.description      = <<-DESC
 On-device animal detection, species classification, and body pose estimation using TensorFlow Lite.

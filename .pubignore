@@ -1,0 +1,10 @@
+.dart_tool/
+.packages
+build/
+pubspec.lock
+*.iml
+.idea/
+
+# Exclude from pub.dev archive (referenced via GitHub URLs)
+assets/screenshots/
+example/integration_test/test_images/

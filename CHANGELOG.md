@@ -1,3 +1,7 @@
+## 1.0.0
+
+* First stable release. On-device animal detection, species/breed classification, and 24-point body pose estimation using TensorFlow Lite. Supports Android, iOS, macOS, Windows, and Linux with automatic hardware acceleration.
+
 ## 0.0.8
 
 * Update documentation
