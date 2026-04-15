@@ -1,3 +1,7 @@
+## 1.0.1
+
+* Update flutter_litert -> 2.0.12
+
 ## 1.0.0
 
 * First stable release. On-device animal detection, species/breed classification, and 24-point body pose estimation using TensorFlow Lite. Supports Android, iOS, macOS, Windows, and Linux with automatic hardware acceleration.
