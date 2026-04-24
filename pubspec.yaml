@@ -1,6 +1,6 @@
 name: animal_detection
 description: "On-device animal detection, species classification, and body pose estimation using TensorFlow Lite."
-version: 1.0.5
+version: 1.0.6
 repository: https://github.com/hugocornellier/animal_detection
 
 environment:
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   opencv_dart: ^2.2.1+4
-  flutter_litert: ^2.3.0
+  flutter_litert: ^2.4.0
   meta: ^1.17.0
   http: ^1.3.0
   path_provider: ^2.1.5
