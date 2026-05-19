@@ -15,7 +15,7 @@ enum AnimalPoseModel {
   hrnet,
 }
 
-/// SuperAnimal body keypoint types (indices 15–38 in the full SuperAnimal topology).
+/// SuperAnimal body keypoint types (indices 15-38 in the full SuperAnimal topology).
 ///
 /// These 24 landmarks cover the spine, neck, tail, and all four limbs.
 ///
