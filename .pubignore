@@ -4,7 +4,12 @@ build/
 pubspec.lock
 *.iml
 .idea/
+*.log
 
 # Exclude from pub.dev archive (referenced via GitHub URLs)
 assets/screenshots/
 example/integration_test/test_images/
+
+# Example Podfiles (gitignored; not needed in the published tarball).
+example/**/Podfile
+example/**/Podfile.lock
