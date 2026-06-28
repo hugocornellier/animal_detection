@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
-import 'package:flutter_litert/flutter_litert.dart';
+import 'package:flutter_litert/native.dart';
 import '../types.dart';
 import '../util/image_utils.dart';
 

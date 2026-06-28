@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:flutter_litert/flutter_litert.dart';
+import 'package:flutter_litert/native.dart';
 
 /// Base class for TFLite model classes that use a single interpreter.
 ///
