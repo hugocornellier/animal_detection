@@ -131,11 +131,11 @@ class _StillImageScreenState extends State<StillImageScreen> {
   String? _errorMessage;
 
   static const List<String> _samplePaths = [
-    'packages/animal_detection/assets/samples/sample_animal_1.png',
-    'packages/animal_detection/assets/samples/sample_animal_2.png',
-    'packages/animal_detection/assets/samples/sample_animal_3.png',
-    'packages/animal_detection/assets/samples/sample_animal_4.png',
-    'packages/animal_detection/assets/samples/sample_animal_5.png',
+    'assets/samples/sample_animal_1.png',
+    'assets/samples/sample_animal_2.png',
+    'assets/samples/sample_animal_3.png',
+    'assets/samples/sample_animal_4.png',
+    'assets/samples/sample_animal_5.png',
   ];
   int _currentSampleIndex = 0;
 
