@@ -1,3 +1,7 @@
+## 1.3.2
+
+* Update flutter_litert -> 3.4.1
+
 ## 1.3.1
 
 * Update flutter_litert -> 3.3.1
