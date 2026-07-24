@@ -237,36 +237,38 @@ class AnimalBodyDetector extends SingleInterpreterModel {
   }
 
   /// Decodes SSD regression deltas into absolute boxes in 320px space.
+  ///
+  /// [ssdAnchors] is centre form (cx, cy, w, h), so the loop reads the decode
+  /// scale directly instead of rebuilding it from corners on every anchor. The
+  /// running offset with a length-derived bound lets the compiler prove every
+  /// access in range, which a literal `i * 4` index does not.
   Float64List _decodeSsdBoxes(Float64List regFlat) {
-    final decoded = Float64List(_totalAnchors * 4);
+    final Float64List anchors = ssdAnchors;
+    final int n = anchors.length;
+    final decoded = Float64List(n);
 
-    for (int i = 0; i < _totalAnchors; i++) {
-      final double ax1 = ssdAnchors[i * 4 + 0];
-      final double ay1 = ssdAnchors[i * 4 + 1];
-      final double ax2 = ssdAnchors[i * 4 + 2];
-      final double ay2 = ssdAnchors[i * 4 + 3];
+    for (int o = 0; o + 3 < n; o += 4) {
+      final double acx = anchors[o + 0];
+      final double acy = anchors[o + 1];
+      final double aw = anchors[o + 2];
+      final double ah = anchors[o + 3];
 
-      final double aw = ax2 - ax1;
-      final double ah = ay2 - ay1;
-      final double acx = ax1 + 0.5 * aw;
-      final double acy = ay1 + 0.5 * ah;
-
-      final double dx = regFlat[i * 4 + 0] / _wx;
-      final double dy = regFlat[i * 4 + 1] / _wy;
+      final double dx = regFlat[o + 0] / _wx;
+      final double dy = regFlat[o + 1] / _wy;
       final double dw =
-          (regFlat[i * 4 + 2] / _ww).clamp(double.negativeInfinity, _bboxClip);
+          (regFlat[o + 2] / _ww).clamp(double.negativeInfinity, _bboxClip);
       final double dh =
-          (regFlat[i * 4 + 3] / _wh).clamp(double.negativeInfinity, _bboxClip);
+          (regFlat[o + 3] / _wh).clamp(double.negativeInfinity, _bboxClip);
 
       final double predCx = dx * aw + acx;
       final double predCy = dy * ah + acy;
       final double predW = math.exp(dw) * aw;
       final double predH = math.exp(dh) * ah;
 
-      decoded[i * 4 + 0] = predCx - 0.5 * predW;
-      decoded[i * 4 + 1] = predCy - 0.5 * predH;
-      decoded[i * 4 + 2] = predCx + 0.5 * predW;
-      decoded[i * 4 + 3] = predCy + 0.5 * predH;
+      decoded[o + 0] = predCx - 0.5 * predW;
+      decoded[o + 1] = predCy - 0.5 * predH;
+      decoded[o + 2] = predCx + 0.5 * predW;
+      decoded[o + 3] = predCy + 0.5 * predH;
     }
 
     return decoded;

@@ -1,3 +1,25 @@
+## 1.4.0
+
+* SSD anchors are now generated at runtime instead of shipping as a literal
+  table. `lib/src/models/ssd_anchors.dart` was 12,944 lines, of which 12,936
+  were a single float literal each; the values are the deterministic output of
+  TF OD API's `create_ssd_anchors`, which `flutter_litert` already exports as
+  `generateAnchors`. The library drops from 15,222 to 2,355 lines and the
+  compiled binary shrinks by about 32 KB.
+* Detection output is unchanged. Verified against the real SSDLite320 model
+  over 9 images at 100 runs each: identical detection counts, bit-identical
+  scores, and a worst-case box coordinate delta of 9.3e-05 px, which comes from
+  the previous table having been rounded to 6 decimals while the generator is
+  full float64. End-to-end timing is unchanged.
+* Anchors are now stored in centre form (`cx, cy, w, h`), which is what
+  `generateAnchors` emits and what the box decoder consumes, removing a
+  corner round-trip that ran on every anchor of every frame.
+* The exported anchor table is retained under `test/fixtures/` as the
+  equivalence reference. `test/ssd_anchors_test.dart` regenerates the anchors
+  and diffs all 3,234 against it on every run, so a change to the generator or
+  its configuration fails immediately.
+* Update flutter_litert -> 3.6.0.
+
 ## 1.3.3
 
 * Update flutter_litert -> 3.5.0
