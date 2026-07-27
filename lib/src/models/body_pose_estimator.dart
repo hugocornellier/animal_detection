@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
-import 'package:flutter_litert/flutter_litert.dart';
 import '../types.dart';
 import '../util/image_utils.dart';
 import '../util/math_utils.dart';
@@ -31,16 +30,20 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   /// The pose model variant this estimator is configured for.
   final AnimalPoseModel model;
 
-  late List<List<List<List<double>>>> _inputTensor;
+  /// Reused flat input tensor, passed to TFLite as its [ByteBuffer].
+  late Float32List _flatInput;
 
   // RTMPose output buffers: simcc_x [1, 39, 512] and simcc_y [1, 39, 512]
-  late List<List<List<double>>> _simccX;
-  late List<List<List<double>>> _simccY;
+  /// SIMCC logits as flat [_numKeypoints * _simccBins] buffers, passed to
+  /// TFLite as ByteBuffers. Rows are read back with zero-copy sublist views.
+  late Float32List _simccX;
+  late Float32List _simccY;
 
   // HRNet output buffer: heatmaps [1, 64, 64, 39]
-  late List<List<List<List<double>>>> _heatmapBuffer;
+  /// HRNet heatmap as a flat NHWC buffer of
+  /// [_heatmapSize * _heatmapSize * _numKeypoints].
+  late Float32List _heatmapBuffer;
 
-  Float32List? _rgbBuffer;
 
   /// Creates a pose estimator for the given [model] variant.
   BodyPoseEstimator({required this.model});
@@ -82,16 +85,13 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   }
 
   void _allocBuffers() {
-    _inputTensor = createNHWCTensor4D(inputSize, inputSize);
+    _flatInput = Float32List(inputSize * inputSize * 3);
     if (model == AnimalPoseModel.rtmpose) {
-      _simccX = allocTensorShape([1, _numKeypoints, _simccBins])
-          as List<List<List<double>>>;
-      _simccY = allocTensorShape([1, _numKeypoints, _simccBins])
-          as List<List<List<double>>>;
+      _simccX = Float32List(_numKeypoints * _simccBins);
+      _simccY = Float32List(_numKeypoints * _simccBins);
     } else {
       _heatmapBuffer =
-          allocTensorShape([1, _heatmapSize, _heatmapSize, _numKeypoints])
-              as List<List<List<List<double>>>>;
+          Float32List(_heatmapSize * _heatmapSize * _numKeypoints);
     }
   }
 
@@ -110,8 +110,7 @@ class BodyPoseEstimator extends SingleInterpreterModel {
     final (padded, params) = ImageUtils.letterboxResize(crop, inputSize);
 
     // 2. ImageNet normalize (BGR->RGB with (x/255 - mean) / std).
-    _rgbBuffer = ImageUtils.matToFloat32ImageNet(padded);
-    fillNHWC4D(_rgbBuffer!, _inputTensor, inputSize, inputSize);
+    ImageUtils.matToFloat32ImageNetSimd(padded, buffer: _flatInput);
     padded.dispose();
 
     // 3. Run model and decode keypoints in 256px letterbox space.
@@ -147,14 +146,17 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   }
 
   Future<List<({double x, double y, double confidence})>> _runRTMPose() async {
-    final outputs = <int, Object>{0: _simccX, 1: _simccY};
+    final outputs = <int, Object>{0: _simccX.buffer, 1: _simccY.buffer};
 
-    await runInference([_inputTensor], outputs);
+    await runInference([_flatInput.buffer], outputs);
 
     final result = <({double x, double y, double confidence})>[];
     for (int kp = 0; kp < _numKeypoints; kp++) {
-      final xRow = _simccX[0][kp];
-      final yRow = _simccY[0][kp];
+      final int rowStart = kp * _simccBins;
+      final xRow =
+          Float32List.sublistView(_simccX, rowStart, rowStart + _simccBins);
+      final yRow =
+          Float32List.sublistView(_simccY, rowStart, rowStart + _simccBins);
 
       // argmax
       int xArgmax = 0;
@@ -187,9 +189,9 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   }
 
   Future<List<({double x, double y, double confidence})>> _runHRNet() async {
-    final outputs = <int, Object>{0: _heatmapBuffer};
+    final outputs = <int, Object>{0: _heatmapBuffer.buffer};
 
-    await runInference([_inputTensor], outputs);
+    await runInference([_flatInput.buffer], outputs);
 
     final double scale = inputSize / _heatmapSize.toDouble(); // 4.0
 
@@ -197,11 +199,12 @@ class BodyPoseEstimator extends SingleInterpreterModel {
     for (int kp = 0; kp < _numKeypoints; kp++) {
       int bestRow = 0;
       int bestCol = 0;
-      double bestVal = _heatmapBuffer[0][0][0][kp];
+      double bestVal = _heatmapBuffer[kp];
 
       for (int row = 0; row < _heatmapSize; row++) {
         for (int col = 0; col < _heatmapSize; col++) {
-          final double v = _heatmapBuffer[0][row][col][kp];
+          final double v =
+              _heatmapBuffer[(row * _heatmapSize + col) * _numKeypoints + kp];
           if (v > bestVal) {
             bestVal = v;
             bestRow = row;

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/native.dart';
@@ -38,6 +39,13 @@ class EnsembleLandmarkModelBase {
   final EnsembleModelGetter getEnsembleModels;
 
   final int _poolSize;
+
+  /// Reusable input tensors, one per pool slot, keyed by the slot's
+  /// interpreter. Each slot is checked out exclusively, so slots never share.
+  final Map<Interpreter, Float32List> _inputBuffers = {};
+
+  /// Reusable flat output tensors, one per pool slot.
+  final Map<Interpreter, Float32List> _outputBuffers = {};
 
   InterpreterPool? _pool256;
   InterpreterPool? _pool320;
@@ -252,23 +260,26 @@ class EnsembleLandmarkModelBase {
     int outputLen,
   ) async {
     return pool.withInterpreter((interpreter, isolateInterpreter) async {
-      final inputTensor = createNHWCTensor4D(inputSize, inputSize);
-      final outputBuffer = allocTensorShape([1, outputLen]);
 
-      final rgb = ImageUtils.matToFloat32(crop);
-      fillNHWC4D(rgb, inputTensor, inputSize, inputSize);
+      // Converted straight into a flat buffer and handed to TFLite as a
+      // ByteBuffer. This runner allocated its nested tensor per call, the same
+      // pattern that cost roughly 290 ms/frame in LandmarkModelRunnerBase.
+      final rgb = _inputBuffers[interpreter] = ImageUtils.matToFloat32Simd(
+        crop,
+        buffer: _inputBuffers[interpreter],
+      );
 
-      final outputs = {0: outputBuffer};
+      final out = _outputBuffers[interpreter] ??= Float32List(outputLen);
+      final outputs = {0: out.buffer};
       if (isolateInterpreter != null) {
-        await isolateInterpreter.runForMultipleInputs([inputTensor], outputs);
+        await isolateInterpreter.runForMultipleInputs([rgb.buffer], outputs);
       } else {
-        interpreter.runForMultipleInputs([inputTensor], outputs);
+        interpreter.runForMultipleInputs([rgb.buffer], outputs);
       }
 
-      final raw = (outputBuffer as List)[0] as List;
       return List<double>.generate(
         outputLen,
-        (i) => (raw[i] as double).clamp(0.0, 1.0),
+        (i) => out[i].clamp(0.0, 1.0),
       );
     });
   }

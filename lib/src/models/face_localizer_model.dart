@@ -18,9 +18,12 @@ class FaceLocalizerModel extends SingleInterpreterModel {
 
   final String _modelPath;
 
-  late List<List<List<List<double>>>> _inputTensor;
-  late List<List<double>> _outputBuffer;
-  Float32List? _rgbBuffer;
+  /// Reused flat input tensor, handed to TFLite as its [ByteBuffer] rather
+  /// than as a nested `List<List<List<List<double>>>>`.
+  late Float32List _flatInput;
+
+  /// Flat [x1, y1, x2, y2] output buffer, passed to TFLite as its ByteBuffer.
+  late Float32List _outputBuffer;
 
   /// Creates a face localizer with the given [inputSize] and [modelPath].
   FaceLocalizerModel({
@@ -38,8 +41,8 @@ class FaceLocalizerModel extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
-    _inputTensor = createNHWCTensor4D(inputSize, inputSize);
-    _outputBuffer = List.generate(1, (_) => List.filled(4, 0.0));
+    _flatInput = Float32List(inputSize * inputSize * 3);
+    _outputBuffer = Float32List(4);
   }
 
   /// Initializes the model from pre-loaded bytes (for isolate use).
@@ -53,8 +56,8 @@ class FaceLocalizerModel extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
-    _inputTensor = createNHWCTensor4D(inputSize, inputSize);
-    _outputBuffer = List.generate(1, (_) => List.filled(4, 0.0));
+    _flatInput = Float32List(inputSize * inputSize * 3);
+    _outputBuffer = Float32List(4);
   }
 
   /// Detects a face bounding box in the given image crop.
@@ -63,13 +66,12 @@ class FaceLocalizerModel extends SingleInterpreterModel {
   Future<BoundingBox?> detect(cv.Mat image) async {
     final (padded, params) = ImageUtils.letterboxResize(image, inputSize);
 
-    _rgbBuffer = ImageUtils.matToFloat32(padded);
-    fillNHWC4D(_rgbBuffer!, _inputTensor, inputSize, inputSize);
+    ImageUtils.matToFloat32Simd(padded, buffer: _flatInput);
     padded.dispose();
 
-    await runInferenceSingle(_inputTensor, _outputBuffer);
+    await runInference([_flatInput.buffer], {0: _outputBuffer.buffer});
 
-    final raw = _outputBuffer[0];
+    final raw = _outputBuffer;
     final xa = raw[0].clamp(0.0, 1.0) * inputSize;
     final ya = raw[1].clamp(0.0, 1.0) * inputSize;
     final xb = raw[2].clamp(0.0, 1.0) * inputSize;

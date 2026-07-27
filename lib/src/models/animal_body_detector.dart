@@ -48,10 +48,10 @@ class AnimalBodyDetector extends SingleInterpreterModel {
 
   static const int _anchorsPerLoc = 6;
 
-  late List<List<List<List<double>>>> _inputTensor;
+  /// Reused flat input tensor, passed to TFLite as its [ByteBuffer].
+  late Float32List _flatInput;
   late Map<int, Object> _outputBuffers;
   late List<List<int>> _outputTensorShapes;
-  Float32List? _rgbBuffer;
 
   /// Initializes the detector by loading the TFLite model from Flutter assets.
   Future<void> initialize(
@@ -63,7 +63,7 @@ class AnimalBodyDetector extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
-    _inputTensor = createNHWCTensor4D(inputSize, inputSize);
+    _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffers = createOutputBuffers(
       interpreter!.getOutputTensors().map((t) => t.shape).toList(),
     );
@@ -82,7 +82,7 @@ class AnimalBodyDetector extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
-    _inputTensor = createNHWCTensor4D(inputSize, inputSize);
+    _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffers = createOutputBuffers(
       interpreter!.getOutputTensors().map((t) => t.shape).toList(),
     );
@@ -106,13 +106,11 @@ class AnimalBodyDetector extends SingleInterpreterModel {
 
     // 1. Resize to 320x320 and apply ImageNet normalization (no letterbox).
     final resized = cv.resize(image, (inputSize, inputSize));
-    _rgbBuffer = ImageUtils.matToFloat32ImageNet(resized);
+    ImageUtils.matToFloat32ImageNetSimd(resized, buffer: _flatInput);
     resized.dispose();
 
-    fillNHWC4D(_rgbBuffer!, _inputTensor, inputSize, inputSize);
-
     // 2. Run inference.
-    await runInference([_inputTensor], _outputBuffers);
+    await runInference([_flatInput.buffer], _outputBuffers);
 
     // 3. Group outputs by (H, W), identify reg (C=24) vs cls (C=12).
     final byHW = <(int, int), _LevelOutputs>{};

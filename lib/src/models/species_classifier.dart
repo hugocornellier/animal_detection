@@ -25,9 +25,10 @@ class SpeciesClassifier extends SingleInterpreterModel {
   final Map<int, String> _speciesLookup = {};
   List<String> _classNames = [];
 
-  late List<List<List<List<double>>>> _inputTensor;
-  late List<List<double>> _outputBuffer;
-  Float32List? _rgbBuffer;
+  /// Reused flat input tensor, passed to TFLite as its [ByteBuffer].
+  late Float32List _flatInput;
+  /// Flat 1000-class logit buffer, passed to TFLite as its ByteBuffer.
+  late Float32List _outputBuffer;
 
   /// Initializes the classifier by loading the TFLite model and species mapping
   /// from Flutter assets.
@@ -40,8 +41,8 @@ class SpeciesClassifier extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
-    _inputTensor = createNHWCTensor4D(inputSize, inputSize);
-    _outputBuffer = List.generate(1, (_) => List.filled(1000, 0.0));
+    _flatInput = Float32List(inputSize * inputSize * 3);
+    _outputBuffer = Float32List(1000);
 
     final mappingJson = await rootBundle.loadString(_mappingPath);
     _buildLookups(mappingJson);
@@ -59,8 +60,8 @@ class SpeciesClassifier extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
-    _inputTensor = createNHWCTensor4D(inputSize, inputSize);
-    _outputBuffer = List.generate(1, (_) => List.filled(1000, 0.0));
+    _flatInput = Float32List(inputSize * inputSize * 3);
+    _outputBuffer = Float32List(1000);
 
     _buildLookups(mappingJson);
   }
@@ -90,13 +91,12 @@ class SpeciesClassifier extends SingleInterpreterModel {
   Future<(String, String?, double)> classify(cv.Mat crop) async {
     final resized = cv.resize(crop, (inputSize, inputSize));
 
-    _rgbBuffer = ImageUtils.matToFloat32ImageNet(resized);
-    fillNHWC4D(_rgbBuffer!, _inputTensor, inputSize, inputSize);
+    ImageUtils.matToFloat32ImageNetSimd(resized, buffer: _flatInput);
     resized.dispose();
 
-    await runInferenceSingle(_inputTensor, _outputBuffer);
+    await runInference([_flatInput.buffer], {0: _outputBuffer.buffer});
 
-    final logits = _outputBuffer[0];
+    final logits = _outputBuffer;
     final (top1Index, top1Prob) = argmaxSoftmax(logits);
 
     final species = _speciesLookup[top1Index] ?? 'unknown_animal';
