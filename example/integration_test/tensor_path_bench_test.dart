@@ -158,6 +158,58 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 
+  testWidgets('ImageUtils SIMD helpers match their per-pixel equivalents',
+      (tester) async {
+    // Guards the two helpers actually used by the model classes. The ImageNet
+    // variant does a per-channel affine via scalar Mat ops, so it needs
+    // proving independently of the plain /255 path.
+    const size = 320;
+    final mat = cv.Mat.zeros(size, size, cv.MatType.CV_8UC3);
+    addTearDown(mat.dispose);
+    for (int y = 0; y < size; y++) {
+      for (int x = 0; x < size; x++) {
+        mat.set<int>(y, x, (x * 7 + y * 13) % 256);
+      }
+    }
+
+    double worstOf(Float32List a, Float32List b) {
+      expect(a.length, b.length);
+      double w = 0;
+      for (int i = 0; i < a.length; i++) {
+        final d = (a[i] - b[i]).abs();
+        if (d > w) w = d;
+      }
+      return w;
+    }
+
+    final plainWorst = worstOf(
+      ImageUtils.matToFloat32Simd(mat),
+      ImageUtils.matToFloat32(mat),
+    );
+    final imagenetWorst = worstOf(
+      ImageUtils.matToFloat32ImageNetSimd(mat),
+      ImageUtils.matToFloat32ImageNet(mat),
+    );
+    debugPrint('TBENCH helper parity: plain=$plainWorst imagenet=$imagenetWorst');
+    expect(plainWorst, lessThan(1e-6), reason: 'matToFloat32Simd mismatch');
+    expect(imagenetWorst, lessThan(1e-5),
+        reason: 'matToFloat32ImageNetSimd mismatch');
+
+    // Buffer reuse must produce identical output to a fresh allocation, and
+    // must actually reuse the instance handed in.
+    final reusable = Float32List(size * size * 3);
+    final returned = ImageUtils.matToFloat32Simd(mat, buffer: reusable);
+    expect(identical(returned, reusable), isTrue,
+        reason: 'supplied buffer of the right length should be reused');
+    expect(worstOf(returned, ImageUtils.matToFloat32(mat)), lessThan(1e-6));
+
+    // A wrong-length buffer must be rejected rather than corrupted.
+    final tooSmall = Float32List(16);
+    final grown = ImageUtils.matToFloat32Simd(mat, buffer: tooSmall);
+    expect(identical(grown, tooSmall), isFalse);
+    expect(grown.length, size * size * 3);
+  });
+
   testWidgets('SIMD path produces the same values as the per-pixel loop',
       (tester) async {
     // A speed change must not move the numbers. Same convention as the
