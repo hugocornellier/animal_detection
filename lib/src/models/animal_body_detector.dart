@@ -5,6 +5,7 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/flutter_litert.dart';
 import '../util/image_utils.dart';
 import '../util/nms.dart';
+import '../util/input_shape.dart';
 import 'ssd_anchors.dart' show ssdAnchors;
 import 'single_interpreter_model.dart';
 
@@ -63,6 +64,7 @@ class AnimalBodyDetector extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'AnimalBodyDetector');
     _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffers = createOutputBuffers(
       interpreter!.getOutputTensors().map((t) => t.shape).toList(),
@@ -82,6 +84,7 @@ class AnimalBodyDetector extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'AnimalBodyDetector');
     _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffers = createOutputBuffers(
       interpreter!.getOutputTensors().map((t) => t.shape).toList(),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/native.dart';
 import '../util/image_utils.dart';
+import '../util/input_shape.dart';
 import '../types.dart';
 
 /// Callback type for downloading ensemble model weights.
@@ -133,6 +134,8 @@ class EnsembleLandmarkModelBase {
     await pool.initialize(
       (options, _) async {
         final interpreter = Interpreter.fromBuffer(bytes, options: options);
+        assertSquareInputSize(
+            interpreter, inputSize, 'EnsembleLandmarkModelBase(${inputSize}px)');
         interpreter.resizeInputTensor(0, [1, inputSize, inputSize, 3]);
         interpreter.allocateTensors();
         return interpreter;

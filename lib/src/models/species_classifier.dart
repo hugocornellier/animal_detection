@@ -6,6 +6,7 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/flutter_litert.dart';
 import '../util/image_utils.dart';
 import '../util/math_utils.dart';
+import '../util/input_shape.dart';
 import 'single_interpreter_model.dart';
 
 /// MobileNetV3-Small ImageNet classifier for species/breed identification.
@@ -41,6 +42,7 @@ class SpeciesClassifier extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'SpeciesClassifier');
     _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffer = Float32List(1000);
 
@@ -60,6 +62,7 @@ class SpeciesClassifier extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'SpeciesClassifier');
     _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffer = Float32List(1000);
 

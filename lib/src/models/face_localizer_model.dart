@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/flutter_litert.dart';
 import '../util/image_utils.dart';
+import '../util/input_shape.dart';
 import 'single_interpreter_model.dart';
 
 /// Generic face bounding box regression model using letterbox preprocessing.
@@ -41,6 +42,7 @@ class FaceLocalizerModel extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'FaceLocalizerModel');
     _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffer = Float32List(4);
   }
@@ -56,6 +58,7 @@ class FaceLocalizerModel extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'FaceLocalizerModel');
     _flatInput = Float32List(inputSize * inputSize * 3);
     _outputBuffer = Float32List(4);
   }

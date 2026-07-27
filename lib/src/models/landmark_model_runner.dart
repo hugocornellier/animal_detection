@@ -4,6 +4,7 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 import 'package:flutter_litert/native.dart';
 import '../types.dart';
 import '../util/image_utils.dart';
+import '../util/input_shape.dart';
 
 /// Generic face landmark regression model runner.
 ///
@@ -51,6 +52,7 @@ class LandmarkModelRunnerBase {
     await _pool.initialize(
       (options, _) async {
         final interpreter = await Interpreter.fromAsset(path, options: options);
+        assertSquareInputSize(interpreter, inputSize, 'LandmarkModelRunnerBase');
         interpreter.resizeInputTensor(0, [1, inputSize, inputSize, 3]);
         interpreter.allocateTensors();
         return interpreter;
@@ -69,6 +71,7 @@ class LandmarkModelRunnerBase {
     await _pool.initialize(
       (options, _) async {
         final interpreter = Interpreter.fromBuffer(bytes, options: options);
+        assertSquareInputSize(interpreter, inputSize, 'LandmarkModelRunnerBase');
         interpreter.resizeInputTensor(0, [1, inputSize, inputSize, 3]);
         interpreter.allocateTensors();
         return interpreter;

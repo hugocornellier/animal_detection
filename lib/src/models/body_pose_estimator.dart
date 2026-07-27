@@ -4,6 +4,7 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 import '../types.dart';
 import '../util/image_utils.dart';
 import '../util/math_utils.dart';
+import '../util/input_shape.dart';
 import 'single_interpreter_model.dart';
 
 /// SuperAnimal body pose estimator supporting RTMPose-S (SimCC) and HRNet-w32 (heatmap).
@@ -67,6 +68,7 @@ class BodyPoseEstimator extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'BodyPoseEstimator');
     _allocBuffers();
   }
 
@@ -81,6 +83,7 @@ class BodyPoseEstimator extends SingleInterpreterModel {
       performanceConfig,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+    assertSquareInputSize(interpreter!, inputSize, 'BodyPoseEstimator');
     _allocBuffers();
   }
 

@@ -1,3 +1,50 @@
+## 2.0.0
+
+* Replace the boxed nested input and output tensors in every model class with
+  reused flat `Float32List`s handed to TFLite as `ByteBuffer`s, matching the
+  approach in face_detection_tflite, pose_detection and hand_detection. Measured
+  end to end on the cat_detection pipeline over a 3264x2448 photo in profile
+  mode with `PerformanceMode.auto`, the full pipeline drops from 438 ms/frame to
+  109 ms/frame and poseOnly from about 44 ms to 15 ms. Model outputs are
+  unchanged.
+
+  The two new helpers `ImageUtils.matToFloat32Simd` and
+  `matToFloat32ImageNetSimd` use OpenCV's vectorized path and accept an optional
+  caller buffer. Both are asserted equal to the per-pixel loops they replace:
+  worst deviation 5.96e-8 (one float32 ULP) for the plain path, 7.15e-7 for the
+  ImageNet affine. `ImageUtils.matToFloat32` and `matToFloat32ImageNet` are
+  retained.
+
+* Fix `ImageUtils.cropAndResize` returning `CropMetadata` built from
+  pre-truncation floats while cropping an integral region. Callers mapped
+  normalized coordinates against an origin up to 1px from where the crop
+  actually began, and against a slightly too-large extent. Measured over the
+  311-image CatFLW holdout with real localizer boxes, this placed landmarks
+  +0.61px right and +0.52px down of ground truth and cost 0.255 NME_IOD,
+  rising to 1.14 at the 95th percentile, with 72% of images improved by the
+  fix. The Python training pipelines normalize against the integer crop, so
+  this also aligns inference with how the models were trained.
+
+  This changes returned landmark coordinates. Downstream packages should bump
+  their own pipeline version so cached detections re-evaluate.
+
+* Fix `ModelDownloader.modelHrnet`, which requested
+  `superanimal_hrnet_w32_256_float16.tflite` while the release publishes
+  `superanimal_hrnet_w32_float16.tflite`. `AnimalPoseModel.hrnet` therefore
+  failed with an HTTP 404 on first use and had never worked. The private
+  filename constant now derives from the public one so the two cannot drift.
+
+* Reject a configured input size that disagrees with the bundled model, via the
+  new internal `assertSquareInputSize`. `Interpreter.resizeInputTensor` accepts
+  a shape the model was not trained for without reporting an error, and
+  inference then returns finite but meaningless values: feeding a 256px
+  landmark model at 384px measured NME_IOD 67.3 against a correct 3.5 while
+  every output stayed in range. All six model classes now validate against
+  `getInputTensor(0).shape` at initialization.
+
+* Stop tracking `.DS_Store` files, which were included in the published
+  archive.
+
 ## 1.4.0
 
 * SSD anchors are now generated at runtime instead of shipping as a literal
