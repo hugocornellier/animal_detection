@@ -45,7 +45,6 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   /// [_heatmapSize * _heatmapSize * _numKeypoints].
   late Float32List _heatmapBuffer;
 
-
   /// Creates a pose estimator for the given [model] variant.
   BodyPoseEstimator({required this.model});
 
@@ -93,8 +92,7 @@ class BodyPoseEstimator extends SingleInterpreterModel {
       _simccX = Float32List(_numKeypoints * _simccBins);
       _simccY = Float32List(_numKeypoints * _simccBins);
     } else {
-      _heatmapBuffer =
-          Float32List(_heatmapSize * _heatmapSize * _numKeypoints);
+      _heatmapBuffer = Float32List(_heatmapSize * _heatmapSize * _numKeypoints);
     }
   }
 
@@ -113,7 +111,10 @@ class BodyPoseEstimator extends SingleInterpreterModel {
     final (padded, params) = ImageUtils.letterboxResize(crop, inputSize);
 
     // 2. ImageNet normalize (BGR->RGB with (x/255 - mean) / std).
-    ImageUtils.matToFloat32ImageNetSimd(padded, buffer: _flatInput);
+    ImageUtils.matToFloat32ImageNetSimd(
+      padded,
+      buffer: usingCompiledModel ? compiledInput! : _flatInput,
+    );
     padded.dispose();
 
     // 3. Run model and decode keypoints in 256px letterbox space.
@@ -149,17 +150,30 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   }
 
   Future<List<({double x, double y, double confidence})>> _runRTMPose() async {
-    final outputs = <int, Object>{0: _simccX.buffer, 1: _simccY.buffer};
-
-    await runInference([_flatInput.buffer], outputs);
+    // Both backends yield the same two SIMCC tensors: the interpreter fills the
+    // preallocated buffers, CompiledModel returns freshly allocated ones.
+    final Float32List simccX;
+    final Float32List simccY;
+    if (usingCompiledModel) {
+      final outs = await runCompiled();
+      simccX = outs[0];
+      simccY = outs[1];
+    } else {
+      await runInference(
+        [_flatInput.buffer],
+        <int, Object>{0: _simccX.buffer, 1: _simccY.buffer},
+      );
+      simccX = _simccX;
+      simccY = _simccY;
+    }
 
     final result = <({double x, double y, double confidence})>[];
     for (int kp = 0; kp < _numKeypoints; kp++) {
       final int rowStart = kp * _simccBins;
       final xRow =
-          Float32List.sublistView(_simccX, rowStart, rowStart + _simccBins);
+          Float32List.sublistView(simccX, rowStart, rowStart + _simccBins);
       final yRow =
-          Float32List.sublistView(_simccY, rowStart, rowStart + _simccBins);
+          Float32List.sublistView(simccY, rowStart, rowStart + _simccBins);
 
       // argmax
       int xArgmax = 0;
@@ -192,9 +206,16 @@ class BodyPoseEstimator extends SingleInterpreterModel {
   }
 
   Future<List<({double x, double y, double confidence})>> _runHRNet() async {
-    final outputs = <int, Object>{0: _heatmapBuffer.buffer};
-
-    await runInference([_flatInput.buffer], outputs);
+    final Float32List heatmap;
+    if (usingCompiledModel) {
+      heatmap = (await runCompiled())[0];
+    } else {
+      await runInference(
+        [_flatInput.buffer],
+        <int, Object>{0: _heatmapBuffer.buffer},
+      );
+      heatmap = _heatmapBuffer;
+    }
 
     final double scale = inputSize / _heatmapSize.toDouble(); // 4.0
 
@@ -202,12 +223,12 @@ class BodyPoseEstimator extends SingleInterpreterModel {
     for (int kp = 0; kp < _numKeypoints; kp++) {
       int bestRow = 0;
       int bestCol = 0;
-      double bestVal = _heatmapBuffer[kp];
+      double bestVal = heatmap[kp];
 
       for (int row = 0; row < _heatmapSize; row++) {
         for (int col = 0; col < _heatmapSize; col++) {
           final double v =
-              _heatmapBuffer[(row * _heatmapSize + col) * _numKeypoints + kp];
+              heatmap[(row * _heatmapSize + col) * _numKeypoints + kp];
           if (v > bestVal) {
             bestVal = v;
             bestRow = row;

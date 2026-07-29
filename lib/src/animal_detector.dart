@@ -112,39 +112,77 @@ class AnimalDetector {
   ///
   /// Used for initialization within a background isolate where Flutter asset
   /// loading is not available.
+  /// When [useCompiledModel] is true, every stage is initialized onto the
+  /// LiteRT Next [CompiledModel] backend instead of the [Interpreter].
+  ///
+  /// Off by default, matching face_detection_tflite, pose_detection and
+  /// hand_detection, which all expose the same opt-in and all default it off.
+  /// [compiledForceCpu] pins each model to CPU rather than attempting GPU
+  /// first.
+  ///
+  /// Read flutter_litert's test/benchmark/RESULTS.md before enabling it: the
+  /// CompiledModel CPU accelerator beats the Interpreter's CPU/XNNPACK path on
+  /// Apple Silicon macOS but is roughly 2x slower on iOS, and strict GPU
+  /// errors on models of this size on both, so the GPU-then-CPU retry lands on
+  /// CPU for them. Whether it is faster is per-platform and per-model, so
+  /// measure before shipping it on.
   Future<void> initializeFromBuffers({
     required Uint8List bodyDetectorBytes,
     required Uint8List classifierBytes,
     required String speciesMappingJson,
     Uint8List? poseModelBytes,
     bool useIsolateInterpreter = true,
+    bool useCompiledModel = false,
+    bool compiledForceCpu = false,
   }) async {
     if (_isInitialized) {
       await dispose();
     }
 
     _bodyDetector = AnimalBodyDetector();
-    await _bodyDetector!.initializeFromBuffer(
-      bodyDetectorBytes,
-      performanceConfig,
-      useIsolateInterpreter: useIsolateInterpreter,
-    );
-
-    _classifier = SpeciesClassifier();
-    await _classifier!.initializeFromBuffer(
-      classifierBytes,
-      speciesMappingJson,
-      performanceConfig,
-      useIsolateInterpreter: useIsolateInterpreter,
-    );
-
-    if (enablePose && poseModelBytes != null) {
-      _poseEstimator = BodyPoseEstimator(model: poseModel);
-      await _poseEstimator!.initializeFromBuffer(
-        poseModelBytes,
+    if (useCompiledModel) {
+      await _bodyDetector!.initCompiledFromBuffer(
+        bodyDetectorBytes,
+        forceCpu: compiledForceCpu,
+      );
+    } else {
+      await _bodyDetector!.initializeFromBuffer(
+        bodyDetectorBytes,
         performanceConfig,
         useIsolateInterpreter: useIsolateInterpreter,
       );
+    }
+
+    _classifier = SpeciesClassifier();
+    if (useCompiledModel) {
+      await _classifier!.initCompiledFromBufferWithMapping(
+        classifierBytes,
+        speciesMappingJson,
+        forceCpu: compiledForceCpu,
+      );
+    } else {
+      await _classifier!.initializeFromBuffer(
+        classifierBytes,
+        speciesMappingJson,
+        performanceConfig,
+        useIsolateInterpreter: useIsolateInterpreter,
+      );
+    }
+
+    if (enablePose && poseModelBytes != null) {
+      _poseEstimator = BodyPoseEstimator(model: poseModel);
+      if (useCompiledModel) {
+        await _poseEstimator!.initCompiledFromBuffer(
+          poseModelBytes,
+          forceCpu: compiledForceCpu,
+        );
+      } else {
+        await _poseEstimator!.initializeFromBuffer(
+          poseModelBytes,
+          performanceConfig,
+          useIsolateInterpreter: useIsolateInterpreter,
+        );
+      }
     }
 
     _isInitialized = true;

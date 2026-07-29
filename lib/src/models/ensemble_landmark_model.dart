@@ -48,6 +48,14 @@ class EnsembleLandmarkModelBase {
   /// Reusable flat output tensors, one per pool slot.
   final Map<Interpreter, Float32List> _outputBuffers = {};
 
+  /// CompiledModel pools, used instead of the interpreter pools when
+  /// initialized via [initializeCompiledFromBuffers]. Opt-in; the interpreter
+  /// path stays the default.
+  CompiledModelPool? _cm256;
+  CompiledModelPool? _cm320;
+  CompiledModelPool? _cm384;
+  bool _useCompiled = false;
+
   InterpreterPool? _pool256;
   InterpreterPool? _pool320;
   InterpreterPool? _pool384;
@@ -134,8 +142,8 @@ class EnsembleLandmarkModelBase {
     await pool.initialize(
       (options, _) async {
         final interpreter = Interpreter.fromBuffer(bytes, options: options);
-        assertSquareInputSize(
-            interpreter, inputSize, 'EnsembleLandmarkModelBase(${inputSize}px)');
+        assertSquareInputSize(interpreter, inputSize,
+            'EnsembleLandmarkModelBase(${inputSize}px)');
         interpreter.resizeInputTensor(0, [1, inputSize, inputSize, 3]);
         interpreter.allocateTensors();
         return interpreter;
@@ -143,6 +151,44 @@ class EnsembleLandmarkModelBase {
       performanceConfig: config,
       useIsolateInterpreter: useIsolateInterpreter,
     );
+  }
+
+  /// Initializes all three scales onto the LiteRT Next [CompiledModel]
+  /// backend instead of interpreter pools.
+  ///
+  /// Defaults match [SingleInterpreterModel.initCompiledFromBuffer]: the
+  /// accelerator set goes through the GPU-then-CPU retry that
+  /// flutter_litert's benchmarks call the production config, and precision
+  /// defaults to fp32 because this model emits coordinates.
+  Future<void> initializeCompiledFromBuffers({
+    required Uint8List bytes256,
+    required Uint8List bytes320,
+    required Uint8List bytes384,
+    bool forceCpu = false,
+    Set<Accelerator> accelerators = const {Accelerator.cpu},
+    Precision precision = Precision.fp32,
+    void Function(Object error)? onGpuFallback,
+  }) async {
+    CompiledModelPool build(Uint8List bytes, int size) {
+      final pool = CompiledModelPool();
+      pool.initialize(
+        poolSize: _poolSize,
+        inputFloats: size * size * 3,
+        create: () => compiledModelFromBufferAuto(
+          bytes,
+          accelerators: accelerators,
+          precision: precision,
+          forceCpu: forceCpu,
+          onGpuFallback: onGpuFallback,
+        ),
+      );
+      return pool;
+    }
+
+    _cm256 = build(bytes256, _size256);
+    _cm320 = build(bytes320, _size320);
+    _cm384 = build(bytes384, _size384);
+    _useCompiled = true;
   }
 
   /// The input size used for cropping (largest model size = 384).
@@ -262,8 +308,22 @@ class EnsembleLandmarkModelBase {
     int inputSize,
     int outputLen,
   ) async {
+    if (_useCompiled) {
+      final CompiledModelPool cm = inputSize == _size256
+          ? _cm256!
+          : inputSize == _size320
+              ? _cm320!
+              : _cm384!;
+      return cm.withModel((model, input) async {
+        ImageUtils.matToFloat32Simd(crop, buffer: input);
+        final Float32List raw = (await model.runAsync([input]))[0];
+        return List<double>.generate(
+          outputLen,
+          (i) => raw[i].clamp(0.0, 1.0),
+        );
+      });
+    }
     return pool.withInterpreter((interpreter, isolateInterpreter) async {
-
       // Converted straight into a flat buffer and handed to TFLite as a
       // ByteBuffer. This runner allocated its nested tensor per call, the same
       // pattern that cost roughly 290 ms/frame in LandmarkModelRunnerBase.
@@ -289,6 +349,9 @@ class EnsembleLandmarkModelBase {
 
   /// Releases native resources held by all three interpreter pools.
   void dispose() {
+    _cm256?.dispose();
+    _cm320?.dispose();
+    _cm384?.dispose();
     _pool256?.dispose();
     _pool320?.dispose();
     _pool384?.dispose();

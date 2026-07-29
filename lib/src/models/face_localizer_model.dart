@@ -69,12 +69,17 @@ class FaceLocalizerModel extends SingleInterpreterModel {
   Future<BoundingBox?> detect(cv.Mat image) async {
     final (padded, params) = ImageUtils.letterboxResize(image, inputSize);
 
-    ImageUtils.matToFloat32Simd(padded, buffer: _flatInput);
+    final Float32List target = usingCompiledModel ? compiledInput! : _flatInput;
+    ImageUtils.matToFloat32Simd(padded, buffer: target);
     padded.dispose();
 
-    await runInference([_flatInput.buffer], {0: _outputBuffer.buffer});
-
-    final raw = _outputBuffer;
+    final Float32List raw;
+    if (usingCompiledModel) {
+      raw = (await runCompiled())[0];
+    } else {
+      await runInference([_flatInput.buffer], {0: _outputBuffer.buffer});
+      raw = _outputBuffer;
+    }
     final xa = raw[0].clamp(0.0, 1.0) * inputSize;
     final ya = raw[1].clamp(0.0, 1.0) * inputSize;
     final xb = raw[2].clamp(0.0, 1.0) * inputSize;

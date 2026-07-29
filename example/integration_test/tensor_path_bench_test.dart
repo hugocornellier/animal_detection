@@ -53,7 +53,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('input tensor path: current vs candidates', (tester) async {
-    debugPrint('TBENCH iters=$_iters warmup=$_warmup (interleaved, median [p25-p75])');
+    debugPrint(
+        'TBENCH iters=$_iters warmup=$_warmup (interleaved, median [p25-p75])');
 
     for (final entry in _sizes.entries) {
       final size = entry.key;
@@ -190,7 +191,8 @@ void main() {
       ImageUtils.matToFloat32ImageNetSimd(mat),
       ImageUtils.matToFloat32ImageNet(mat),
     );
-    debugPrint('TBENCH helper parity: plain=$plainWorst imagenet=$imagenetWorst');
+    debugPrint(
+        'TBENCH helper parity: plain=$plainWorst imagenet=$imagenetWorst');
     expect(plainWorst, lessThan(1e-6), reason: 'matToFloat32Simd mismatch');
     expect(imagenetWorst, lessThan(1e-5),
         reason: 'matToFloat32ImageNetSimd mismatch');

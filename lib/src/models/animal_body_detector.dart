@@ -51,7 +51,10 @@ class AnimalBodyDetector extends SingleInterpreterModel {
 
   /// Reused flat input tensor, passed to TFLite as its [ByteBuffer].
   late Float32List _flatInput;
-  late Map<int, Object> _outputBuffers;
+
+  /// Flat NHWC output tensors, one per detector head, handed to TFLite as
+  /// ByteBuffers. The SSD decode indexes them as `(row * w + col) * c + ch`.
+  late List<Float32List> _outputBuffers;
   late List<List<int>> _outputTensorShapes;
 
   /// Initializes the detector by loading the TFLite model from Flutter assets.
@@ -66,11 +69,59 @@ class AnimalBodyDetector extends SingleInterpreterModel {
     );
     assertSquareInputSize(interpreter!, inputSize, 'AnimalBodyDetector');
     _flatInput = Float32List(inputSize * inputSize * 3);
-    _outputBuffers = createOutputBuffers(
-      interpreter!.getOutputTensors().map((t) => t.shape).toList(),
-    );
     _outputTensorShapes =
         interpreter!.getOutputTensors().map((t) => t.shape).toList();
+    _outputBuffers = [
+      for (final shape in _outputTensorShapes)
+        Float32List(shape.reduce((a, b) => a * b)),
+    ];
+  }
+
+  /// Derives `[1, H, W, C]` for an output tensor of [floats] elements.
+  ///
+  /// The SSD decode groups heads by level, so it needs shapes. The interpreter
+  /// reports them directly; CompiledModel reports only byte sizes. Every
+  /// (level, channels) pair in this model yields a distinct element count
+  /// (12, 24, 48, 96, 108, 216, 300, 600, 1200, 2400, 4800, 9600), so the
+  /// mapping back is unambiguous. Correctness is proved end to end by the
+  /// backend-parity test, which compares detections from both backends: a
+  /// wrong shape here mis-groups levels and yields different boxes.
+  static List<int>? _shapeForFloatCount(int floats) {
+    for (final (h, w) in _levelSizes) {
+      for (final c in const [24, 12]) {
+        if (h * w * c == floats) return [1, h, w, c];
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> initCompiledFromBuffer(
+    Uint8List bytes, {
+    bool forceCpu = false,
+    Set<Accelerator> accelerators = const {Accelerator.cpu},
+    Precision precision = Precision.fp32,
+    void Function(Object error)? onGpuFallback,
+  }) async {
+    await super.initCompiledFromBuffer(
+      bytes,
+      forceCpu: forceCpu,
+      accelerators: accelerators,
+      precision: precision,
+      onGpuFallback: onGpuFallback,
+    );
+    final sizes = compiledOutputByteSizes!;
+    _outputTensorShapes = [
+      for (final bytes in sizes)
+        _shapeForFloatCount(bytes ~/ 4) ??
+            (throw StateError(
+              'AnimalBodyDetector: cannot derive an output shape for '
+              '${bytes ~/ 4} floats. Expected one of the SSD level/channel '
+              'products for levels $_levelSizes and channels {24, 12}.',
+            )),
+    ];
+    // Unused on this backend: CompiledModel returns its own output lists.
+    _outputBuffers = const [];
   }
 
   /// Initializes the detector from pre-loaded model bytes.
@@ -86,11 +137,12 @@ class AnimalBodyDetector extends SingleInterpreterModel {
     );
     assertSquareInputSize(interpreter!, inputSize, 'AnimalBodyDetector');
     _flatInput = Float32List(inputSize * inputSize * 3);
-    _outputBuffers = createOutputBuffers(
-      interpreter!.getOutputTensors().map((t) => t.shape).toList(),
-    );
     _outputTensorShapes =
         interpreter!.getOutputTensors().map((t) => t.shape).toList();
+    _outputBuffers = [
+      for (final shape in _outputTensorShapes)
+        Float32List(shape.reduce((a, b) => a * b)),
+    ];
   }
 
   /// Detect animals in [image].
@@ -109,11 +161,28 @@ class AnimalBodyDetector extends SingleInterpreterModel {
 
     // 1. Resize to 320x320 and apply ImageNet normalization (no letterbox).
     final resized = cv.resize(image, (inputSize, inputSize));
-    ImageUtils.matToFloat32ImageNetSimd(resized, buffer: _flatInput);
+    ImageUtils.matToFloat32ImageNetSimd(
+      resized,
+      buffer: usingCompiledModel ? compiledInput! : _flatInput,
+    );
     resized.dispose();
 
-    // 2. Run inference.
-    await runInference([_flatInput.buffer], _outputBuffers);
+    // 2. Run inference. Both backends yield the same flat tensors: the
+    // interpreter fills the preallocated buffers, CompiledModel returns
+    // freshly allocated ones in the same output order.
+    final List<Float32List> outs;
+    if (usingCompiledModel) {
+      outs = await runCompiled();
+    } else {
+      await runInference(
+        [_flatInput.buffer],
+        <int, Object>{
+          for (int i = 0; i < _outputBuffers.length; i++)
+            i: _outputBuffers[i].buffer,
+        },
+      );
+      outs = _outputBuffers;
+    }
 
     // 3. Group outputs by (H, W), identify reg (C=24) vs cls (C=12).
     final byHW = <(int, int), _LevelOutputs>{};
@@ -127,7 +196,7 @@ class AnimalBodyDetector extends SingleInterpreterModel {
       final key = (h, w);
 
       byHW[key] ??= _LevelOutputs();
-      final buf = _outputBuffers[i]! as List<List<List<List<double>>>>;
+      final buf = outs[i];
 
       if (c == 24) {
         byHW[key]!.reg = buf;
@@ -162,13 +231,17 @@ class AnimalBodyDetector extends SingleInterpreterModel {
             final int outBase = (anchorOffset + flatIdx) * 4;
             final int outClsBase = (anchorOffset + flatIdx) * 2;
 
-            regAll[outBase + 0] = reg[0][row][col][regBase + 0];
-            regAll[outBase + 1] = reg[0][row][col][regBase + 1];
-            regAll[outBase + 2] = reg[0][row][col][regBase + 2];
-            regAll[outBase + 3] = reg[0][row][col][regBase + 3];
+            // Flat NHWC: (row * w + col) * channels + channel.
+            final int regLoc = (row * w + col) * 24;
+            final int clsLoc = (row * w + col) * 12;
 
-            clsAll[outClsBase + 0] = cls[0][row][col][clsBase + 0];
-            clsAll[outClsBase + 1] = cls[0][row][col][clsBase + 1];
+            regAll[outBase + 0] = reg[regLoc + regBase + 0];
+            regAll[outBase + 1] = reg[regLoc + regBase + 1];
+            regAll[outBase + 2] = reg[regLoc + regBase + 2];
+            regAll[outBase + 3] = reg[regLoc + regBase + 3];
+
+            clsAll[outClsBase + 0] = cls[clsLoc + clsBase + 0];
+            clsAll[outClsBase + 1] = cls[clsLoc + clsBase + 1];
 
             flatIdx++;
           }
@@ -278,8 +351,11 @@ class AnimalBodyDetector extends SingleInterpreterModel {
 
 /// Holds the reg and cls output buffers for one SSD feature level.
 class _LevelOutputs {
-  List<List<List<List<double>>>>? reg;
-  List<List<List<List<double>>>>? cls;
+  /// Flat NHWC regression tensor for this level, 24 channels per location.
+  Float32List? reg;
+
+  /// Flat NHWC classification tensor for this level, 12 channels per location.
+  Float32List? cls;
   int regH = 0;
   int regW = 0;
 }

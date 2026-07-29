@@ -1,3 +1,29 @@
+## 2.1.0
+
+Adds an optional LiteRT Next `CompiledModel` backend, off by default, and pins
+`flutter_litert` to ^3.7.0.
+
+* **New `useCompiledModel` on `initializeFromBuffers`.** When true, every stage
+  is initialized onto `CompiledModel` instead of `Interpreter`. Off by default,
+  matching the same opt-in in face_detection_tflite, pose_detection and
+  hand_detection. `compiledForceCpu` is accepted alongside it.
+* **The CompiledModel backend is CPU-only, deliberately.** Each stage requests
+  `{Accelerator.cpu}` rather than the permissive `{gpu, cpu}` set. This is a
+  correctness requirement, not a performance preference: LiteRT miscomputes two
+  of this package's own models once the GPU accelerator is in the set, by 42.3%
+  of the output range for the species classifier and 53.8% for the pose model,
+  while still reporting success. Do not widen the accelerator set without
+  measuring against a bare-CPU reference first; flutter_litert 3.7.0 ships
+  `verifyCompiledModel` for exactly that check.
+* Whether CompiledModel is faster is per-platform and per-model. Its CPU
+  accelerator beats the Interpreter's XNNPACK path on Apple Silicon macOS but is
+  roughly 2x slower on iOS, so measure before enabling it.
+* SSD output shapes are now derived rather than assumed, so the body detector
+  works under both backends.
+* Requires `flutter_litert` ^3.7.0, which fixes a 3x macOS CPU slowdown affecting
+  every stage of this pipeline (ruy multithreading was inert in the previously
+  bundled macOS dylib).
+
 ## 2.0.0
 
 * Replace the boxed nested input and output tensors in every model class with

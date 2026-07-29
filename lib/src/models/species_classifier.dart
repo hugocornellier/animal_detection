@@ -28,6 +28,7 @@ class SpeciesClassifier extends SingleInterpreterModel {
 
   /// Reused flat input tensor, passed to TFLite as its [ByteBuffer].
   late Float32List _flatInput;
+
   /// Flat 1000-class logit buffer, passed to TFLite as its ByteBuffer.
   late Float32List _outputBuffer;
 
@@ -47,6 +48,20 @@ class SpeciesClassifier extends SingleInterpreterModel {
     _outputBuffer = Float32List(1000);
 
     final mappingJson = await rootBundle.loadString(_mappingPath);
+    _buildLookups(mappingJson);
+  }
+
+  /// Initializes the classifier onto the [CompiledModel] backend from
+  /// pre-loaded model bytes and mapping JSON.
+  ///
+  /// Mirrors [initializeFromBuffer] but takes the alternative backend. The
+  /// species lookup is independent of which backend runs the model.
+  Future<void> initCompiledFromBufferWithMapping(
+    Uint8List modelBytes,
+    String mappingJson, {
+    bool forceCpu = false,
+  }) async {
+    await initCompiledFromBuffer(modelBytes, forceCpu: forceCpu);
     _buildLookups(mappingJson);
   }
 
@@ -94,12 +109,17 @@ class SpeciesClassifier extends SingleInterpreterModel {
   Future<(String, String?, double)> classify(cv.Mat crop) async {
     final resized = cv.resize(crop, (inputSize, inputSize));
 
-    ImageUtils.matToFloat32ImageNetSimd(resized, buffer: _flatInput);
+    final Float32List target = usingCompiledModel ? compiledInput! : _flatInput;
+    ImageUtils.matToFloat32ImageNetSimd(resized, buffer: target);
     resized.dispose();
 
-    await runInference([_flatInput.buffer], {0: _outputBuffer.buffer});
-
-    final logits = _outputBuffer;
+    final Float32List logits;
+    if (usingCompiledModel) {
+      logits = (await runCompiled())[0];
+    } else {
+      await runInference([_flatInput.buffer], {0: _outputBuffer.buffer});
+      logits = _outputBuffer;
+    }
     final (top1Index, top1Prob) = argmaxSoftmax(logits);
 
     final species = _speciesLookup[top1Index] ?? 'unknown_animal';

@@ -101,10 +101,9 @@ class ImageUtils {
     final cv.Mat rgb = cv.cvtColor(mat, cv.COLOR_BGR2RGB);
     final cv.Mat f32 = rgb.convertTo(cv.MatType.CV_32FC3, alpha: 1.0 / 255.0);
     rgb.dispose();
-    final Float32List dst =
-        (buffer != null && buffer.length == totalFloats)
-            ? buffer
-            : Float32List(totalFloats);
+    final Float32List dst = (buffer != null && buffer.length == totalFloats)
+        ? buffer
+        : Float32List(totalFloats);
     dst.setRange(0, totalFloats, f32.data.buffer.asFloat32List(0, totalFloats));
     f32.dispose();
     return dst;
@@ -147,10 +146,9 @@ class ImageUtils {
       ),
     );
     centered.dispose();
-    final Float32List dst =
-        (buffer != null && buffer.length == totalFloats)
-            ? buffer
-            : Float32List(totalFloats);
+    final Float32List dst = (buffer != null && buffer.length == totalFloats)
+        ? buffer
+        : Float32List(totalFloats);
     dst.setRange(
       0,
       totalFloats,

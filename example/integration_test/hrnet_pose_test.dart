@@ -79,18 +79,16 @@ void main() {
           reason: 'hrnet keypoint $i is not finite');
       expect(q.x, inInclusiveRange(-w, 2 * w));
       expect(q.y, inInclusiveRange(-h, 2 * h));
-      dists.add(math.sqrt(
-          (p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y)));
+      dists.add(
+          math.sqrt((p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y)));
     }
     dists.sort();
     final median = dists[dists.length ~/ 2];
 
-    double confMin(AnimalPose pose) => pose.landmarks
-        .map((l) => l.confidence)
-        .reduce((x, y) => x < y ? x : y);
-    double confMax(AnimalPose pose) => pose.landmarks
-        .map((l) => l.confidence)
-        .reduce((x, y) => x > y ? x : y);
+    double confMin(AnimalPose pose) =>
+        pose.landmarks.map((l) => l.confidence).reduce((x, y) => x < y ? x : y);
+    double confMax(AnimalPose pose) =>
+        pose.landmarks.map((l) => l.confidence).reduce((x, y) => x > y ? x : y);
 
     debugPrint('HRNET n=${dists.length} median=${median.toStringAsFixed(1)}px '
         'worst=${dists.last.toStringAsFixed(1)}px '
