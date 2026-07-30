@@ -44,6 +44,42 @@ class AnimalDetector {
   /// - Android/macOS/Linux/Windows: XNNPACK (2-5x SIMD acceleration)
   final PerformanceConfig performanceConfig;
 
+  /// Optional override of [performanceConfig] for the body pose stage alone.
+  ///
+  /// Null means the pose stage uses [performanceConfig], which is the previous
+  /// and still the default behaviour.
+  ///
+  /// The best delegate differs per stage, and a single pipeline-wide mode cannot
+  /// express that. Measured on macOS arm64 (M4 Max) with flutter_litert 3.7.0,
+  /// XNNPACK versus the Metal GPU delegate:
+  ///
+  /// | model | XNNPACK | Metal |
+  /// |---|---|---|
+  /// | ssdlite | 4.42 ms | 5.87 ms |
+  /// | species classifier | 1.25 ms | interpreter creation fails |
+  /// | rtmpose_s | 7.82 ms | 10.85 ms, output deviates 2.6e-01 |
+  /// | hrnet_w32 | 67.14 ms | 13.88 ms, output agrees to 1.2e-06 |
+  ///
+  /// So [AnimalPoseModel.hrnet] is 4.8x faster on the GPU delegate with matching
+  /// output, while every other stage is slower there or fails outright. Setting
+  /// [performanceConfig] to [PerformanceMode.gpu] pipeline-wide would throw
+  /// during [initialize], because the species classifier cannot build a GPU
+  /// interpreter. This override is the way to collect the HRNet win without
+  /// affecting the other stages.
+  ///
+  /// [AnimalPoseModel.rtmpose], the default, should NOT be routed to the GPU: it
+  /// is slower there and its output deviates by 2.6e-01, which is corruption
+  /// rather than fp16 rounding.
+  ///
+  /// Only macOS has been measured. iOS resolves Metal from a different binary and
+  /// Android uses an entirely different GPU delegate, so verify on device before
+  /// setting this in production.
+  final PerformanceConfig? posePerformanceConfig;
+
+  /// The config the pose stage actually runs with.
+  PerformanceConfig get effectivePoseConfig =>
+      posePerformanceConfig ?? performanceConfig;
+
   bool _isInitialized = false;
 
   /// Creates an animal detector with the specified configuration.
@@ -53,6 +89,7 @@ class AnimalDetector {
     this.cropMargin = 0.20,
     this.detThreshold = 0.5,
     this.performanceConfig = const PerformanceConfig(),
+    this.posePerformanceConfig,
   });
 
   /// Initializes the detector by loading TensorFlow Lite models.
@@ -94,12 +131,12 @@ class AnimalDetector {
         );
         await _poseEstimator!.initializeFromBuffer(
           hrnetBytes,
-          performanceConfig,
+          effectivePoseConfig,
           useIsolateInterpreter: useIsolateInterpreter,
         );
       } else {
         await _poseEstimator!.initialize(
-          performanceConfig,
+          effectivePoseConfig,
           useIsolateInterpreter: useIsolateInterpreter,
         );
       }
@@ -115,17 +152,31 @@ class AnimalDetector {
   /// When [useCompiledModel] is true, every stage is initialized onto the
   /// LiteRT Next [CompiledModel] backend instead of the [Interpreter].
   ///
-  /// Off by default, matching face_detection_tflite, pose_detection and
-  /// hand_detection, which all expose the same opt-in and all default it off.
-  /// [compiledForceCpu] pins each model to CPU rather than attempting GPU
-  /// first.
+  /// Off by default, matching face_detection_tflite, pose_detection,
+  /// hand_detection and object_detection, which all expose the same opt-in and
+  /// all default it off. The [Interpreter] is the supported path; this one is
+  /// for callers who have measured a win on their own hardware.
   ///
-  /// Read flutter_litert's test/benchmark/RESULTS.md before enabling it: the
-  /// CompiledModel CPU accelerator beats the Interpreter's CPU/XNNPACK path on
-  /// Apple Silicon macOS but is roughly 2x slower on iOS, and strict GPU
-  /// errors on models of this size on both, so the GPU-then-CPU retry lands on
-  /// CPU for them. Whether it is faster is per-platform and per-model, so
-  /// measure before shipping it on.
+  /// **The CompiledModel path runs CPU-only, and that is a correctness
+  /// requirement rather than a performance preference.** Each stage requests
+  /// `{Accelerator.cpu}`, unlike the sibling packages above, which default to
+  /// the permissive `{Accelerator.gpu, Accelerator.cpu}`. The deviation is
+  /// deliberate: LiteRT miscomputes two of this package's own models once the
+  /// GPU accelerator is in the set, by 42.3% of the output range for the
+  /// species classifier and 53.8% for the pose model, while still reporting
+  /// success. Widening the set here would ship silently wrong detections.
+  /// flutter_litert's `verifyCompiledModel` is the check to run before ever
+  /// changing it.
+  ///
+  /// Because that set is already CPU-only, [compiledForceCpu] has no effect
+  /// through this entry point. It is kept for parity with the per-model
+  /// `initCompiledFromBuffer` methods, which do accept an accelerator set and
+  /// where the flag still overrides it.
+  ///
+  /// Whether CompiledModel is faster is per-platform and per-model, so measure
+  /// before shipping it on: its CPU accelerator beats the Interpreter's
+  /// CPU/XNNPACK path on Apple Silicon macOS but is roughly 2x slower on iOS.
+  /// See flutter_litert's test/benchmark/RESULTS.md.
   Future<void> initializeFromBuffers({
     required Uint8List bodyDetectorBytes,
     required Uint8List classifierBytes,
@@ -179,7 +230,7 @@ class AnimalDetector {
       } else {
         await _poseEstimator!.initializeFromBuffer(
           poseModelBytes,
-          performanceConfig,
+          effectivePoseConfig,
           useIsolateInterpreter: useIsolateInterpreter,
         );
       }
