@@ -107,7 +107,7 @@ class LandmarkModelRunnerBase {
     Uint8List bytes, {
     bool forceCpu = false,
     Set<Accelerator> accelerators = const {Accelerator.cpu},
-    Precision precision = Precision.fp16,
+    Precision precision = Precision.fp32,
     void Function(Object error)? onGpuFallback,
   }) async {
     _compiledPool.initialize(

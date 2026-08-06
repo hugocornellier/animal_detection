@@ -23,7 +23,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   # Used by the tensor-path benchmark to call createNHWCTensor4D / fillNHWC4D
   # directly, isolating input conversion cost from any particular model.
-  flutter_litert: ^3.7.0
+  flutter_litert: ^3.8.0
 
 flutter:
   uses-material-design: true

@@ -1,7 +1,19 @@
 ## 2.1.0
 
+* **Default precision is now `Precision.fp32` instead of `fp16`.** This changes
+  numeric output. `flutter_litert` 3.8.0 changed its own default for the same
+  reason: across 29 published detection models measured on five GPUs, fp16
+  matched a plain-CPU reference for only about a fifth of them, while fp32
+  matched every model that compiled. These graphs emit pixel-space coordinates
+  and landmark positions, and fp16 carries about three decimal digits of
+  mantissa, so the error lands directly on output geometry. The cost is real and
+  worth stating plainly: fp32 is a median 29.9% slower on GPU across those five
+  GPUs, with Apple M4 the lone exception at 6.5% faster. Pass
+  `precision: Precision.fp16` explicitly to restore the previous behaviour,
+  ideally per model and validated on your target GPU.
+* Pin `flutter_litert` to `^3.8.0`.
 Adds an optional LiteRT Next `CompiledModel` backend, off by default, and pins
-`flutter_litert` to ^3.7.0.
+`flutter_litert` to ^3.8.0.
 
 * **New `useCompiledModel` on `initializeFromBuffers`.** When true, every stage
   is initialized onto `CompiledModel` instead of `Interpreter`. Off by default,
@@ -20,7 +32,7 @@ Adds an optional LiteRT Next `CompiledModel` backend, off by default, and pins
   roughly 2x slower on iOS, so measure before enabling it.
 * SSD output shapes are now derived rather than assumed, so the body detector
   works under both backends.
-* Requires `flutter_litert` ^3.7.0, which fixes a 3x macOS CPU slowdown affecting
+* Requires `flutter_litert` ^3.8.0, which fixes a 3x macOS CPU slowdown affecting
   every stage of this pipeline (ruy multithreading was inert in the previously
   bundled macOS dylib).
 
