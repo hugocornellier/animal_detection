@@ -12,7 +12,7 @@ import '../util/input_shape.dart';
 /// outputs normalized (x,y) pairs for each landmark. The raw output is
 /// denormalized to original image coordinates using crop metadata.
 ///
-/// Used by both cat (48 landmarks, 256px) and dog (46 landmarks, 384px)
+/// Used by both cat (48 landmarks, 384px) and dog (46 landmarks, 384px)
 /// face landmark pipelines. Species-specific landmark types are created
 /// by the caller from the raw coordinate pairs.
 class LandmarkModelRunnerBase {
@@ -110,16 +110,50 @@ class LandmarkModelRunnerBase {
     Precision precision = Precision.fp32,
     void Function(Object error)? onGpuFallback,
   }) async {
+    CompiledModel createVerifiedModel() {
+      CompiledModel create(
+        Set<Accelerator> requestedAccelerators, {
+        required bool requestedForceCpu,
+      }) =>
+          compiledModelFromBufferAuto(
+            bytes,
+            accelerators: requestedAccelerators,
+            precision: precision,
+            forceCpu: requestedForceCpu,
+            onGpuFallback: onGpuFallback,
+          );
+
+      var model = create(accelerators, requestedForceCpu: forceCpu);
+      var verification = verifyCompiledModel(bytes, model);
+      if (!verification.agrees &&
+          !forceCpu &&
+          accelerators.contains(Accelerator.gpu)) {
+        model.close();
+        onGpuFallback?.call(
+          StateError(
+            'CompiledModel GPU verification failed; retrying on CPU: '
+            '$verification',
+          ),
+        );
+        model = create(
+          const {Accelerator.cpu},
+          requestedForceCpu: true,
+        );
+        verification = verifyCompiledModel(bytes, model);
+      }
+      if (!verification.agrees) {
+        model.close();
+        throw StateError(
+          'CompiledModel backend verification failed: $verification',
+        );
+      }
+      return model;
+    }
+
     _compiledPool.initialize(
       poolSize: poolSize,
       inputFloats: inputSize * inputSize * 3,
-      create: () => compiledModelFromBufferAuto(
-        bytes,
-        accelerators: accelerators,
-        precision: precision,
-        forceCpu: forceCpu,
-        onGpuFallback: onGpuFallback,
-      ),
+      create: createVerifiedModel,
     );
     _useCompiled = true;
   }

@@ -51,6 +51,8 @@ export 'package:flutter_litert/flutter_litert.dart'
     show
         PerformanceMode,
         PerformanceConfig,
+        Accelerator,
+        Precision,
         BoundingBox,
         Point,
         LetterboxParams,

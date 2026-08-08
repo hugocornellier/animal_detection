@@ -94,13 +94,42 @@ abstract class SingleInterpreterModel {
     Precision precision = Precision.fp32,
     void Function(Object error)? onGpuFallback,
   }) async {
-    final model = compiledModelFromBufferAuto(
-      bytes,
-      accelerators: accelerators,
-      precision: precision,
-      forceCpu: forceCpu,
-      onGpuFallback: onGpuFallback,
-    );
+    CompiledModel create(
+      Set<Accelerator> requestedAccelerators, {
+      required bool requestedForceCpu,
+    }) =>
+        compiledModelFromBufferAuto(
+          bytes,
+          accelerators: requestedAccelerators,
+          precision: precision,
+          forceCpu: requestedForceCpu,
+          onGpuFallback: onGpuFallback,
+        );
+
+    var model = create(accelerators, requestedForceCpu: forceCpu);
+    var verification = verifyCompiledModel(bytes, model);
+    if (!verification.agrees &&
+        !forceCpu &&
+        accelerators.contains(Accelerator.gpu)) {
+      model.close();
+      onGpuFallback?.call(
+        StateError(
+          'CompiledModel GPU verification failed; retrying on CPU: '
+          '$verification',
+        ),
+      );
+      model = create(
+        const {Accelerator.cpu},
+        requestedForceCpu: true,
+      );
+      verification = verifyCompiledModel(bytes, model);
+    }
+    if (!verification.agrees) {
+      model.close();
+      throw StateError(
+        'CompiledModel backend verification failed: $verification',
+      );
+    }
     _compiled = model;
     _compiledInput = Float32List(model.inputByteSizes[0] ~/ 4);
   }

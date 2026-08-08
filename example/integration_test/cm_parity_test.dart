@@ -49,6 +49,73 @@ Future<List<Animal>> _run({
   }
 }
 
+double _boxDelta(BoundingBox a, BoundingBox b) => <double>[
+      (a.left - b.left).abs(),
+      (a.top - b.top).abs(),
+      (a.right - b.right).abs(),
+      (a.bottom - b.bottom).abs(),
+    ].reduce((x, y) => x > y ? x : y);
+
+void _expectParity(
+  List<Animal> expected,
+  List<Animal> actual,
+  String label,
+) {
+  expect(actual.length, expected.length, reason: '$label animal count');
+  for (var i = 0; i < expected.length; i++) {
+    final a = expected[i];
+    final b = actual[i];
+    final box = _boxDelta(a.boundingBox, b.boundingBox);
+    debugPrint(
+      'PARITY $label [$i] species=${b.species} '
+      'score=${b.score.toStringAsFixed(4)} '
+      'worst box delta=${box.toStringAsFixed(2)}px '
+      'pose=${b.pose?.landmarks.length}',
+    );
+
+    expect(b.species, a.species, reason: '$label species[$i]');
+    expect(b.breed, a.breed, reason: '$label breed[$i]');
+    expect(b.imageWidth, a.imageWidth, reason: '$label image width[$i]');
+    expect(b.imageHeight, a.imageHeight, reason: '$label image height[$i]');
+    expect(b.speciesConfidence, isNotNull);
+    expect(a.speciesConfidence, isNotNull);
+    expect(
+      (b.speciesConfidence! - a.speciesConfidence!).abs(),
+      lessThan(0.02),
+      reason: '$label species confidence[$i]',
+    );
+    expect(
+      (b.score - a.score).abs(),
+      lessThan(0.02),
+      reason: '$label body score[$i]',
+    );
+    expect(box, lessThan(10.0), reason: '$label body box[$i]');
+
+    expect(b.pose, isNotNull, reason: '$label pose[$i]');
+    final expectedPose = a.pose!.landmarks;
+    final actualPose = b.pose!.landmarks;
+    expect(actualPose.length, expectedPose.length, reason: '$label pose count');
+    for (var j = 0; j < expectedPose.length; j++) {
+      expect(actualPose[j].type, expectedPose[j].type);
+      expect(
+        (actualPose[j].confidence - expectedPose[j].confidence).abs(),
+        lessThan(0.02),
+        reason: '$label pose confidence[$i][$j]',
+      );
+      expect(
+        (actualPose[j].x - expectedPose[j].x).abs(),
+        lessThan(10.0),
+        reason: '$label pose x[$i][$j]',
+      );
+      expect(
+        (actualPose[j].y - expectedPose[j].y).abs(),
+        lessThan(10.0),
+        reason: '$label pose y[$i][$j]',
+      );
+    }
+  }
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -56,49 +123,8 @@ void main() {
     final itp = await _run(useCompiledModel: false);
     final cm = await _run(useCompiledModel: true);
     final cmCpu = await _run(useCompiledModel: true, forceCpu: true);
-    debugPrint('PARITY compiled cpu-only: '
-        '${cmCpu.length} animal(s) species=${cmCpu.isEmpty ? "-" : cmCpu.first.species}');
-
-    debugPrint('PARITY interpreter: ${itp.length} animal(s)');
-    debugPrint('PARITY compiled   : ${cm.length} animal(s)');
     expect(itp, isNotEmpty, reason: 'interpreter found nothing');
-    expect(cm.length, itp.length, reason: 'backends disagree on animal count');
-
-    for (int i = 0; i < itp.length; i++) {
-      final a = itp[i];
-      final b = cm[i];
-      final box = <double>[
-        (a.boundingBox.left - b.boundingBox.left).abs(),
-        (a.boundingBox.top - b.boundingBox.top).abs(),
-        (a.boundingBox.right - b.boundingBox.right).abs(),
-        (a.boundingBox.bottom - b.boundingBox.bottom).abs(),
-      ].reduce((x, y) => x > y ? x : y);
-      debugPrint('PARITY [$i] species itp=${a.species} cm=${b.species} | '
-          'score ${a.score.toStringAsFixed(4)} vs ${b.score.toStringAsFixed(4)} | '
-          'worst box delta ${box.toStringAsFixed(2)}px | '
-          'pose ${a.pose?.landmarks.length} vs ${b.pose?.landmarks.length}');
-
-      expect(b.species, a.species);
-
-      // Compare keypoint VALUES, not just counts. An earlier version of this
-      // test checked only length and would have passed while rtmpose diverged
-      // by 0.238 under the mixed GPU/CPU partition.
-      final ap = a.pose!.landmarks;
-      final bp = b.pose!.landmarks;
-      double worstKp = 0;
-      for (int k = 0; k < ap.length; k++) {
-        final dx = (ap[k].x - bp[k].x).abs();
-        final dy = (ap[k].y - bp[k].y).abs();
-        if (dx > worstKp) worstKp = dx;
-        if (dy > worstKp) worstKp = dy;
-      }
-      debugPrint('PARITY [$i] worst pose keypoint delta '
-          '${worstKp.toStringAsFixed(2)}px');
-      expect(worstKp, lessThan(10.0), reason: 'pose keypoints diverge');
-      // Metal and CPU kernels differ slightly; a mis-derived shape would move
-      // boxes by hundreds of pixels, not a few.
-      expect(box, lessThan(10.0), reason: 'bounding boxes diverge');
-      expect(b.pose?.landmarks.length, a.pose?.landmarks.length);
-    }
+    _expectParity(itp, cmCpu, 'CompiledModel CPU');
+    _expectParity(itp, cm, 'CompiledModel GPU+CPU');
   }, timeout: const Timeout(Duration(minutes: 6)));
 }

@@ -1,3 +1,18 @@
+## 3.0.0
+
+* Add the same public, opt-in CompiledModel configuration used by object, face,
+  pose, and hand detection. `AnimalDetector.initialize()` and the new
+  `AnimalDetector.create()` accept `useCompiledModel`, `accelerators`, and
+  `precision`; Interpreter remains the default.
+* Move the inference pipeline into a reusable `AnimalDetectorCore` and make
+  `AnimalDetector` own one background worker isolate. Cat and dog detection can
+  reuse the core inside their existing workers without nesting isolates.
+* Verify every requested CompiledModel against a plain-CPU Interpreter before
+  use. An unsafe GPU graph retries on CompiledModel CPU; if CPU also fails, only
+  that stage falls back to Interpreter instead of returning corrupted output.
+* Preserve `initializeFromBuffers`, `compiledForceCpu`, and the existing result
+  APIs for source compatibility while routing them through the worker.
+
 ## 2.1.0
 
 * **Default precision is now `Precision.fp32` instead of `fp16`.** This changes

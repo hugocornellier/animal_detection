@@ -60,8 +60,20 @@ class SpeciesClassifier extends SingleInterpreterModel {
     Uint8List modelBytes,
     String mappingJson, {
     bool forceCpu = false,
+    Set<Accelerator> accelerators = const {
+      Accelerator.gpu,
+      Accelerator.cpu,
+    },
+    Precision precision = Precision.fp32,
+    void Function(Object error)? onGpuFallback,
   }) async {
-    await initCompiledFromBuffer(modelBytes, forceCpu: forceCpu);
+    await initCompiledFromBuffer(
+      modelBytes,
+      forceCpu: forceCpu,
+      accelerators: accelerators,
+      precision: precision,
+      onGpuFallback: onGpuFallback,
+    );
     _buildLookups(mappingJson);
   }
 

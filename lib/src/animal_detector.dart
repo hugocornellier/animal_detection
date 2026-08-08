@@ -1,88 +1,60 @@
-import 'dart:typed_data';
+import 'dart:isolate';
+
+import 'package:flutter/services.dart';
+import 'package:flutter_litert/native.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
+
+import 'animal_detector_core.dart';
 import 'types.dart';
-import 'util/image_utils.dart';
 import 'util/model_downloader.dart';
-import 'models/animal_body_detector.dart';
-import 'models/species_classifier.dart';
-import 'models/body_pose_estimator.dart';
 
-/// On-device animal detection using a multi-stage TensorFlow Lite pipeline.
-///
-/// Runs SSD body detection, species classification, and optionally body pose
-/// estimation. Returns a list of [Animal] objects with bounding boxes, species
-/// labels, and pose keypoints.
-///
-/// Usage:
-/// ```dart
-/// final detector = AnimalDetector();
-/// await detector.initialize();
-/// final animals = await detector.detect(imageBytes);
-/// await detector.dispose();
-/// ```
-class AnimalDetector {
-  AnimalBodyDetector? _bodyDetector;
-  SpeciesClassifier? _classifier;
-  BodyPoseEstimator? _poseEstimator;
+class _AnimalIsolateStartupData {
+  const _AnimalIsolateStartupData({
+    required this.sendPort,
+    required this.bodyDetectorBytes,
+    required this.classifierBytes,
+    required this.speciesMappingJson,
+    required this.poseModelBytes,
+    required this.poseModelName,
+    required this.enablePose,
+    required this.cropMargin,
+    required this.detThreshold,
+    required this.performanceModeName,
+    required this.numThreads,
+    required this.posePerformanceModeName,
+    required this.poseNumThreads,
+    required this.useCompiledModel,
+    required this.compiledForceCpu,
+    required this.acceleratorIndices,
+    required this.precisionIndex,
+  });
 
-  /// Body pose model variant.
-  final AnimalPoseModel poseModel;
-
-  /// Whether to run pose estimation.
+  final SendPort sendPort;
+  final TransferableTypedData bodyDetectorBytes;
+  final TransferableTypedData classifierBytes;
+  final String speciesMappingJson;
+  final TransferableTypedData? poseModelBytes;
+  final String poseModelName;
   final bool enablePose;
-
-  /// Margin fraction added to each side of the body bounding box before cropping.
   final double cropMargin;
-
-  /// SSD detection score threshold.
   final double detThreshold;
+  final String performanceModeName;
+  final int? numThreads;
+  final String? posePerformanceModeName;
+  final int? poseNumThreads;
+  final bool useCompiledModel;
+  final bool compiledForceCpu;
+  final List<int> acceleratorIndices;
+  final int precisionIndex;
+}
 
-  /// Performance configuration for TensorFlow Lite inference.
-  ///
-  /// By default, auto mode selects the optimal delegate per platform:
-  /// - iOS: Metal GPU delegate
-  /// - Android/macOS/Linux/Windows: XNNPACK (2-5x SIMD acceleration)
-  final PerformanceConfig performanceConfig;
-
-  /// Optional override of [performanceConfig] for the body pose stage alone.
-  ///
-  /// Null means the pose stage uses [performanceConfig], which is the previous
-  /// and still the default behaviour.
-  ///
-  /// The best delegate differs per stage, and a single pipeline-wide mode cannot
-  /// express that. Measured on macOS arm64 (M4 Max) with flutter_litert 3.7.0,
-  /// XNNPACK versus the Metal GPU delegate:
-  ///
-  /// | model | XNNPACK | Metal |
-  /// |---|---|---|
-  /// | ssdlite | 4.42 ms | 5.87 ms |
-  /// | species classifier | 1.25 ms | interpreter creation fails |
-  /// | rtmpose_s | 7.82 ms | 10.85 ms, output deviates 2.6e-01 |
-  /// | hrnet_w32 | 67.14 ms | 13.88 ms, output agrees to 1.2e-06 |
-  ///
-  /// So [AnimalPoseModel.hrnet] is 4.8x faster on the GPU delegate with matching
-  /// output, while every other stage is slower there or fails outright. Setting
-  /// [performanceConfig] to [PerformanceMode.gpu] pipeline-wide would throw
-  /// during [initialize], because the species classifier cannot build a GPU
-  /// interpreter. This override is the way to collect the HRNet win without
-  /// affecting the other stages.
-  ///
-  /// [AnimalPoseModel.rtmpose], the default, should NOT be routed to the GPU: it
-  /// is slower there and its output deviates by 2.6e-01, which is corruption
-  /// rather than fp16 rounding.
-  ///
-  /// Only macOS has been measured. iOS resolves Metal from a different binary and
-  /// Android uses an entirely different GPU delegate, so verify on device before
-  /// setting this in production.
-  final PerformanceConfig? posePerformanceConfig;
-
-  /// The config the pose stage actually runs with.
-  PerformanceConfig get effectivePoseConfig =>
-      posePerformanceConfig ?? performanceConfig;
-
-  bool _isInitialized = false;
-
-  /// Creates an animal detector with the specified configuration.
+/// On-device animal detection using a multi-stage LiteRT pipeline.
+///
+/// The detector owns one background isolate. Model loading and all inference
+/// run there, matching the execution model used by the object, face, pose, and
+/// hand detection packages.
+class AnimalDetector {
+  /// Creates an uninitialized detector with the requested pipeline settings.
   AnimalDetector({
     this.poseModel = AnimalPoseModel.rtmpose,
     this.enablePose = true,
@@ -92,91 +64,133 @@ class AnimalDetector {
     this.posePerformanceConfig,
   });
 
-  /// Initializes the detector by loading TensorFlow Lite models.
+  /// Creates and initializes an animal detector in one step.
+  static Future<AnimalDetector> create({
+    AnimalPoseModel poseModel = AnimalPoseModel.rtmpose,
+    bool enablePose = true,
+    double cropMargin = 0.20,
+    double detThreshold = 0.5,
+    PerformanceConfig performanceConfig = const PerformanceConfig(),
+    PerformanceConfig? posePerformanceConfig,
+    void Function(String model, int received, int total)? onDownloadProgress,
+    bool useCompiledModel = false,
+    Set<Accelerator> accelerators = const {
+      Accelerator.gpu,
+      Accelerator.cpu,
+    },
+    Precision precision = Precision.fp32,
+  }) async {
+    final detector = AnimalDetector(
+      poseModel: poseModel,
+      enablePose: enablePose,
+      cropMargin: cropMargin,
+      detThreshold: detThreshold,
+      performanceConfig: performanceConfig,
+      posePerformanceConfig: posePerformanceConfig,
+    );
+    await detector.initialize(
+      onDownloadProgress: onDownloadProgress,
+      useCompiledModel: useCompiledModel,
+      accelerators: accelerators,
+      precision: precision,
+    );
+    return detector;
+  }
+
+  /// Body-pose model variant used when [enablePose] is true.
+  final AnimalPoseModel poseModel;
+
+  /// Whether body-pose estimation runs after detection and classification.
+  final bool enablePose;
+
+  /// Fractional margin added around each detected body before pose inference.
+  final double cropMargin;
+
+  /// Minimum SSD score accepted as an animal detection.
+  final double detThreshold;
+
+  /// Delegate configuration for the classic Interpreter backend.
+  final PerformanceConfig performanceConfig;
+
+  /// Optional Interpreter configuration for the pose stage alone.
+  final PerformanceConfig? posePerformanceConfig;
+
+  _AnimalDetectorWorker? _worker;
+
+  /// Whether the background worker has initialized all requested models.
+  bool get isReady => _worker?.isReady ?? false;
+
+  /// Alias retained for consistency with the previous API.
+  bool get isInitialized => isReady;
+
+  /// Returns true if the optional HRNet model is already cached locally.
+  static Future<bool> isHrnetCached() => ModelDownloader.isHrnetCached();
+
+  /// Loads the bundled models and starts the background detection isolate.
   ///
-  /// Must be called before [detect] or [detectFromMat].
-  ///
-  /// When [poseModel] is [AnimalPoseModel.hrnet], the HRNet model (~54.6 MB) is
-  /// downloaded from GitHub Releases on first use and cached locally.
-  ///
-  /// [onDownloadProgress] is called during any model download with
-  /// (modelName, bytesReceived, totalBytes).
+  /// [useCompiledModel] opts every stage into LiteRT Next CompiledModel. It is
+  /// off by default. [accelerators] and [precision] configure that backend;
+  /// [performanceConfig] remains specific to the classic Interpreter backend.
   Future<void> initialize({
     void Function(String model, int received, int total)? onDownloadProgress,
-    bool useIsolateInterpreter = true,
+    bool useCompiledModel = false,
+    Set<Accelerator> accelerators = const {
+      Accelerator.gpu,
+      Accelerator.cpu,
+    },
+    Precision precision = Precision.fp32,
   }) async {
-    if (_isInitialized) {
-      await dispose();
-    }
-
-    _bodyDetector = AnimalBodyDetector();
-    await _bodyDetector!.initialize(
-      performanceConfig,
-      useIsolateInterpreter: useIsolateInterpreter,
+    final modelData = await Future.wait<ByteData>([
+      rootBundle.load(
+        'packages/animal_detection/assets/models/'
+        'superanimal_ssdlite_float16.tflite',
+      ),
+      rootBundle.load(
+        'packages/animal_detection/assets/models/'
+        'species_classifier_float16.tflite',
+      ),
+    ]);
+    final mapping = await rootBundle.loadString(
+      'packages/animal_detection/assets/models/species_mapping.json',
     );
 
-    _classifier = SpeciesClassifier();
-    await _classifier!.initialize(
-      performanceConfig,
-      useIsolateInterpreter: useIsolateInterpreter,
-    );
-
+    Uint8List? poseBytes;
     if (enablePose) {
-      _poseEstimator = BodyPoseEstimator(model: poseModel);
       if (poseModel == AnimalPoseModel.hrnet) {
-        final hrnetBytes = await ModelDownloader.getHrnetModel(
-          onProgress: onDownloadProgress != null
-              ? (r, t) => onDownloadProgress(ModelDownloader.modelHrnet, r, t)
-              : null,
-        );
-        await _poseEstimator!.initializeFromBuffer(
-          hrnetBytes,
-          effectivePoseConfig,
-          useIsolateInterpreter: useIsolateInterpreter,
+        poseBytes = await ModelDownloader.getHrnetModel(
+          onProgress: onDownloadProgress == null
+              ? null
+              : (received, total) => onDownloadProgress(
+                    ModelDownloader.modelHrnet,
+                    received,
+                    total,
+                  ),
         );
       } else {
-        await _poseEstimator!.initialize(
-          effectivePoseConfig,
-          useIsolateInterpreter: useIsolateInterpreter,
+        final data = await rootBundle.load(
+          'packages/animal_detection/assets/models/'
+          'superanimal_rtmpose_s_float16.tflite',
         );
+        poseBytes = data.buffer.asUint8List();
       }
     }
 
-    _isInitialized = true;
+    await initializeFromBuffers(
+      bodyDetectorBytes: modelData[0].buffer.asUint8List(),
+      classifierBytes: modelData[1].buffer.asUint8List(),
+      speciesMappingJson: mapping,
+      poseModelBytes: poseBytes,
+      useCompiledModel: useCompiledModel,
+      accelerators: accelerators,
+      precision: precision,
+    );
   }
 
-  /// Initializes the detector from pre-loaded model bytes.
+  /// Starts the detector from model bytes already loaded by the caller.
   ///
-  /// Used for initialization within a background isolate where Flutter asset
-  /// loading is not available.
-  /// When [useCompiledModel] is true, every stage is initialized onto the
-  /// LiteRT Next [CompiledModel] backend instead of the [Interpreter].
-  ///
-  /// Off by default, matching face_detection_tflite, pose_detection,
-  /// hand_detection and object_detection, which all expose the same opt-in and
-  /// all default it off. The [Interpreter] is the supported path; this one is
-  /// for callers who have measured a win on their own hardware.
-  ///
-  /// **The CompiledModel path runs CPU-only, and that is a correctness
-  /// requirement rather than a performance preference.** Each stage requests
-  /// `{Accelerator.cpu}`, unlike the sibling packages above, which default to
-  /// the permissive `{Accelerator.gpu, Accelerator.cpu}`. The deviation is
-  /// deliberate: LiteRT miscomputes two of this package's own models once the
-  /// GPU accelerator is in the set, by 42.3% of the output range for the
-  /// species classifier and 53.8% for the pose model, while still reporting
-  /// success. Widening the set here would ship silently wrong detections.
-  /// flutter_litert's `verifyCompiledModel` is the check to run before ever
-  /// changing it.
-  ///
-  /// Because that set is already CPU-only, [compiledForceCpu] has no effect
-  /// through this entry point. It is kept for parity with the per-model
-  /// `initCompiledFromBuffer` methods, which do accept an accelerator set and
-  /// where the flag still overrides it.
-  ///
-  /// Whether CompiledModel is faster is per-platform and per-model, so measure
-  /// before shipping it on: its CPU accelerator beats the Interpreter's
-  /// CPU/XNNPACK path on Apple Silicon macOS but is roughly 2x slower on iOS.
-  /// See flutter_litert's test/benchmark/RESULTS.md.
+  /// [useIsolateInterpreter] is retained for source compatibility. The public
+  /// detector now owns an outer worker isolate, so nested IsolateInterpreters
+  /// are always disabled inside that worker.
   Future<void> initializeFromBuffers({
     required Uint8List bodyDetectorBytes,
     required Uint8List classifierBytes,
@@ -185,201 +199,234 @@ class AnimalDetector {
     bool useIsolateInterpreter = true,
     bool useCompiledModel = false,
     bool compiledForceCpu = false,
+    Set<Accelerator> accelerators = const {
+      Accelerator.gpu,
+      Accelerator.cpu,
+    },
+    Precision precision = Precision.fp32,
   }) async {
-    if (_isInitialized) {
-      await dispose();
-    }
+    if (_worker != null) await dispose();
 
-    _bodyDetector = AnimalBodyDetector();
-    if (useCompiledModel) {
-      await _bodyDetector!.initCompiledFromBuffer(
-        bodyDetectorBytes,
-        forceCpu: compiledForceCpu,
-      );
-    } else {
-      await _bodyDetector!.initializeFromBuffer(
-        bodyDetectorBytes,
-        performanceConfig,
-        useIsolateInterpreter: useIsolateInterpreter,
-      );
-    }
-
-    _classifier = SpeciesClassifier();
-    if (useCompiledModel) {
-      await _classifier!.initCompiledFromBufferWithMapping(
-        classifierBytes,
-        speciesMappingJson,
-        forceCpu: compiledForceCpu,
-      );
-    } else {
-      await _classifier!.initializeFromBuffer(
-        classifierBytes,
-        speciesMappingJson,
-        performanceConfig,
-        useIsolateInterpreter: useIsolateInterpreter,
-      );
-    }
-
-    if (enablePose && poseModelBytes != null) {
-      _poseEstimator = BodyPoseEstimator(model: poseModel);
-      if (useCompiledModel) {
-        await _poseEstimator!.initCompiledFromBuffer(
-          poseModelBytes,
-          forceCpu: compiledForceCpu,
-        );
-      } else {
-        await _poseEstimator!.initializeFromBuffer(
-          poseModelBytes,
-          effectivePoseConfig,
-          useIsolateInterpreter: useIsolateInterpreter,
-        );
-      }
-    }
-
-    _isInitialized = true;
-  }
-
-  /// Returns true if the detector has been initialized and is ready to use.
-  bool get isInitialized => _isInitialized;
-
-  /// Returns true if the HRNet model is already cached locally.
-  static Future<bool> isHrnetCached() => ModelDownloader.isHrnetCached();
-
-  /// Releases all resources used by the detector.
-  Future<void> dispose() async {
-    _bodyDetector?.dispose();
-    _classifier?.dispose();
-    _poseEstimator?.dispose();
-    _bodyDetector = null;
-    _classifier = null;
-    _poseEstimator = null;
-    _isInitialized = false;
-  }
-
-  /// Detects animals in an image from raw bytes.
-  ///
-  /// Decodes the image bytes using OpenCV and runs the detection pipeline.
-  ///
-  /// Returns a list of [Animal] objects. Returns an empty list if image decoding
-  /// fails or no animals are detected.
-  ///
-  /// Throws [StateError] if called before [initialize].
-  Future<List<Animal>> detect(Uint8List imageBytes) async {
-    if (!_isInitialized) {
-      throw StateError(
-          'AnimalDetector not initialized. Call initialize() first.');
-    }
+    final worker = _AnimalDetectorWorker();
     try {
-      final mat = cv.imdecode(imageBytes, cv.IMREAD_COLOR);
-      if (mat.isEmpty) return <Animal>[];
-      try {
-        return await detectFromMat(
-          mat,
-          imageWidth: mat.cols,
-          imageHeight: mat.rows,
-        );
-      } finally {
-        mat.dispose();
-      }
-    } catch (e) {
-      return <Animal>[];
+      await worker.initialize(
+        startupData: (sendPort) => _AnimalIsolateStartupData(
+          sendPort: sendPort,
+          bodyDetectorBytes: TransferableTypedData.fromList([
+            bodyDetectorBytes,
+          ]),
+          classifierBytes: TransferableTypedData.fromList([
+            classifierBytes,
+          ]),
+          speciesMappingJson: speciesMappingJson,
+          poseModelBytes: poseModelBytes == null
+              ? null
+              : TransferableTypedData.fromList([poseModelBytes]),
+          poseModelName: poseModel.name,
+          enablePose: enablePose,
+          cropMargin: cropMargin,
+          detThreshold: detThreshold,
+          performanceModeName: performanceConfig.mode.name,
+          numThreads: performanceConfig.numThreads,
+          posePerformanceModeName: posePerformanceConfig?.mode.name,
+          poseNumThreads: posePerformanceConfig?.numThreads,
+          useCompiledModel: useCompiledModel,
+          compiledForceCpu: compiledForceCpu,
+          acceleratorIndices: accelerators.map((a) => a.index).toList(),
+          precisionIndex: precision.index,
+        ),
+      );
+    } catch (_) {
+      await worker.dispose();
+      rethrow;
     }
+    _worker = worker;
   }
 
-  /// Detects animals in an OpenCV Mat image.
+  /// Detects animals from encoded JPEG, PNG, or other OpenCV image bytes.
+  Future<List<Animal>> detect(Uint8List imageBytes) async {
+    final result = await _requireWorker().sendRequest<List<dynamic>>(
+      'detect',
+      {
+        'bytes': TransferableTypedData.fromList([imageBytes])
+      },
+    );
+    return _deserializeAnimals(result);
+  }
+
+  /// Detects animals from a pre-decoded OpenCV matrix.
   ///
-  /// Runs the pipeline: SSD detection -> classify -> optional pose estimation.
-  ///
-  /// Returns a list of [Animal] objects.
-  ///
-  /// Throws [StateError] if called before [initialize].
+  /// The supplied matrix remains owned by the caller.
   Future<List<Animal>> detectFromMat(
     cv.Mat image, {
     required int imageWidth,
     required int imageHeight,
   }) async {
-    if (!_isInitialized) {
-      throw StateError(
-          'AnimalDetector not initialized. Call initialize() first.');
-    }
-
-    // Stage 1: SSD body detection
-    final detections = await _bodyDetector!.detect(
-      image,
-      scoreThreshold: detThreshold,
+    final result = await _requireWorker().sendRequest<List<dynamic>>(
+      'detectMat',
+      {
+        'bytes': TransferableTypedData.fromList([image.data]),
+        'width': imageWidth,
+        'height': imageHeight,
+        'matType': image.type.value,
+      },
     );
-    if (detections.isEmpty) return <Animal>[];
+    return _deserializeAnimals(result);
+  }
 
-    final animals = <Animal>[];
+  /// Releases the worker isolate and all native model resources.
+  Future<void> dispose() async {
+    final worker = _worker;
+    _worker = null;
+    if (worker != null) await worker.disposeGracefully();
+  }
 
-    for (final (bbox, score) in detections) {
-      String? species;
-      String? breed;
-      double? speciesConfidence;
-      AnimalPose? pose;
+  _AnimalDetectorWorker _requireWorker() {
+    final worker = _worker;
+    if (worker == null || !worker.isReady) {
+      throw StateError(
+        'AnimalDetector not initialized. Call initialize() first.',
+      );
+    }
+    return worker;
+  }
 
-      // Stage 2: species classification on the original (unexpanded) bbox
-      final origBw = (bbox.right - bbox.left).toInt();
-      final origBh = (bbox.bottom - bbox.top).toInt();
-      if (origBw >= 1 && origBh >= 1) {
-        final classifyCrop = image.region(
-          cv.Rect(
-            bbox.left.toInt(),
-            bbox.top.toInt(),
-            origBw,
-            origBh,
-          ),
-        );
-        try {
-          final (sp, br, conf) = await _classifier!.classify(classifyCrop);
-          species = sp;
-          breed = br;
-          speciesConfidence = conf;
-        } finally {
-          classifyCrop.dispose();
-        }
-      }
+  static List<Animal> _deserializeAnimals(List<dynamic> result) => result
+      .map((item) => Animal.fromMap(Map<String, dynamic>.from(item as Map)))
+      .toList();
 
-      // Stage 3: body pose estimation on the expanded crop
-      if (enablePose && _poseEstimator != null) {
-        final (cx1, cy1, cx2, cy2) = ImageUtils.expandBox(
-          bbox.left,
-          bbox.top,
-          bbox.right,
-          bbox.bottom,
-          cropMargin,
-          imageWidth,
-          imageHeight,
-        );
+  static cv.Mat _matFromBytes(
+    int rows,
+    int cols,
+    cv.MatType type,
+    Uint8List bytes,
+  ) {
+    final mat = cv.Mat.create(rows: rows, cols: cols, type: type);
+    mat.data.setRange(0, bytes.length, bytes);
+    return mat;
+  }
 
-        final int cropW = cx2 - cx1;
-        final int cropH = cy2 - cy1;
-        if (cropW >= 1 && cropH >= 1) {
-          final expandedCrop = image.region(cv.Rect(cx1, cy1, cropW, cropH));
-          try {
-            pose = await _poseEstimator!.estimate(
-              expandedCrop,
-              cropX: cx1,
-              cropY: cy1,
-            );
-          } finally {
-            expandedCrop.dispose();
-          }
-        }
-      }
+  @pragma('vm:entry-point')
+  static void _isolateEntry(_AnimalIsolateStartupData data) async {
+    final mainSendPort = data.sendPort;
+    final workerReceivePort = ReceivePort();
+    AnimalDetectorCore? detector;
 
-      animals.add(Animal(
-        boundingBox: bbox,
-        score: score,
-        species: species,
-        breed: breed,
-        speciesConfidence: speciesConfidence,
-        pose: pose,
-        imageWidth: imageWidth,
-        imageHeight: imageHeight,
-      ));
+    try {
+      final performanceMode = PerformanceMode.values.byName(
+        data.performanceModeName,
+      );
+      final poseMode = data.posePerformanceModeName == null
+          ? null
+          : PerformanceMode.values.byName(data.posePerformanceModeName!);
+      detector = AnimalDetectorCore(
+        poseModel: AnimalPoseModel.values.byName(data.poseModelName),
+        enablePose: data.enablePose,
+        cropMargin: data.cropMargin,
+        detThreshold: data.detThreshold,
+        performanceConfig: PerformanceConfig(
+          mode: performanceMode,
+          numThreads: data.numThreads,
+        ),
+        posePerformanceConfig: poseMode == null
+            ? null
+            : PerformanceConfig(
+                mode: poseMode,
+                numThreads: data.poseNumThreads,
+              ),
+      );
+      await detector.initializeFromBuffers(
+        bodyDetectorBytes: data.bodyDetectorBytes.materialize().asUint8List(),
+        classifierBytes: data.classifierBytes.materialize().asUint8List(),
+        speciesMappingJson: data.speciesMappingJson,
+        poseModelBytes: data.poseModelBytes?.materialize().asUint8List(),
+        useIsolateInterpreter: false,
+        useCompiledModel: data.useCompiledModel,
+        compiledForceCpu: data.compiledForceCpu,
+        accelerators: data.acceleratorIndices
+            .map((index) => Accelerator.values[index])
+            .toSet(),
+        precision: Precision.values[data.precisionIndex],
+      );
+      mainSendPort.send(workerReceivePort.sendPort);
+    } catch (error, stackTrace) {
+      mainSendPort.send({
+        'error': 'Animal detection isolate initialization failed: '
+            '$error\n$stackTrace',
+      });
+      return;
     }
 
-    return animals;
+    workerReceivePort.listen((message) async {
+      if (message is! Map) return;
+      final id = message['id'] as int?;
+      final op = message['op'] as String?;
+      if (id == null || op == null) return;
+
+      try {
+        switch (op) {
+          case 'detect':
+            final bytes = (message['bytes'] as TransferableTypedData)
+                .materialize()
+                .asUint8List();
+            final animals = await detector!.detect(bytes);
+            mainSendPort.send({
+              'id': id,
+              'result': animals.map((animal) => animal.toMap()).toList(),
+            });
+          case 'detectMat':
+            final bytes = (message['bytes'] as TransferableTypedData)
+                .materialize()
+                .asUint8List();
+            final width = message['width'] as int;
+            final height = message['height'] as int;
+            final mat = _matFromBytes(
+              height,
+              width,
+              cv.MatType(message['matType'] as int),
+              bytes,
+            );
+            try {
+              final animals = await detector!.detectFromMat(
+                mat,
+                imageWidth: width,
+                imageHeight: height,
+              );
+              mainSendPort.send({
+                'id': id,
+                'result': animals.map((animal) => animal.toMap()).toList(),
+              });
+            } finally {
+              mat.dispose();
+            }
+          case 'dispose':
+            await detector?.dispose();
+            detector = null;
+            mainSendPort.send({'id': id, 'result': true});
+            workerReceivePort.close();
+        }
+      } catch (error, stackTrace) {
+        mainSendPort.send({'id': id, 'error': '$error\n$stackTrace'});
+      }
+    });
+  }
+}
+
+class _AnimalDetectorWorker extends IsolateWorkerBase {
+  @override
+  String get workerDisposeOp => 'dispose';
+
+  Future<void> initialize({
+    required _AnimalIsolateStartupData Function(SendPort) startupData,
+  }) async {
+    await initWorker(
+      (sendPort) => Isolate.spawn(
+        AnimalDetector._isolateEntry,
+        startupData(sendPort),
+        debugName: 'AnimalDetector',
+      ),
+      timeout: const Duration(minutes: 2),
+      timeoutMessage: 'Animal detection isolate initialization timed out',
+    );
   }
 }

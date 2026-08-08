@@ -57,7 +57,7 @@ final detector = AnimalDetector(
   enablePose: true,                          // Enable body pose estimation
   cropMargin: 0.20,                          // Margin around detected body for pose crop
   detThreshold: 0.5,                         // SSD detection score threshold
-  performanceConfig: PerformanceConfig.disabled, // Performance optimization (default: disabled)
+  performanceConfig: const PerformanceConfig(), // Auto acceleration (default)
 );
 ```
 
@@ -67,7 +67,7 @@ final detector = AnimalDetector(
 | `enablePose` | `bool` | `true` | Whether to run pose estimation |
 | `cropMargin` | `double` | `0.20` | Margin around detected body crop (0.0-1.0) |
 | `detThreshold` | `double` | `0.5` | SSD detection score threshold (0.0-1.0) |
-| `performanceConfig` | `PerformanceConfig` | `disabled` | Hardware acceleration config |
+| `performanceConfig` | `PerformanceConfig` | `auto` | Interpreter hardware acceleration config |
 
 ## Pose Model Variants
 
@@ -161,6 +161,26 @@ final detector = AnimalDetector(
 );
 await detector.initialize();
 ```
+
+### LiteRT Next CompiledModel
+
+CompiledModel is available through the same opt-in used by the other detection
+packages and remains off by default:
+
+```dart
+// Try GPU first, with verified CPU/stage fallback.
+await detector.initialize(useCompiledModel: true);
+
+// Pin CompiledModel to CPU.
+await detector.initialize(
+  useCompiledModel: true,
+  accelerators: {Accelerator.cpu},
+);
+```
+
+Every requested compiled graph is compared with a plain-CPU Interpreter before
+use. A numerically unsafe GPU graph retries on CompiledModel CPU; if that also
+fails, only that stage uses Interpreter. `Precision.fp32` is the default.
 
 ## Body Pose Keypoints (24-Point)
 
