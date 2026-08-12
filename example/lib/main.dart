@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:animal_detection/animal_detection.dart';
 
+import 'native_media.dart';
+
 void main() {
   runApp(const AnimalDetectionApp());
 }
@@ -36,71 +38,165 @@ class AnimalDetectionHome extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Animal Detection Demo'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cruelty_free, size: 100, color: Colors.brown[300]),
-            const SizedBox(height: 48),
-            Text(
-              'Animal Detection',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Detect animals with species classification and body pose',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+      body: _ScrollableCentered(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Choose a Demo',
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
-            ),
-            const SizedBox(height: 48),
-            SizedBox(
-              width: 400,
-              child: Card(
-                elevation: 4,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
+                ),
+                const SizedBox(height: 28),
+                _buildSection(context, 'Animal Detection / Body Pose', [
+                  _buildModeCard(
+                    context,
+                    icon: Icons.videocam,
+                    title: 'Live Camera',
+                    description: 'Real-time animal detection from camera feed',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LiveCameraScreen(),
+                      ),
+                    ),
+                  ),
+                  _buildModeCard(
+                    context,
+                    icon: Icons.image,
+                    title: 'Still Image',
+                    description:
+                        'Detect animals in photos from gallery or camera',
+                    onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const StillImageScreen(),
                       ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.image, size: 64, color: Colors.brown),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Still Image',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Detect animals in photos from gallery, camera, or samples',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward_ios),
-                      ],
                     ),
                   ),
-                ),
-              ),
+                  _buildModeCard(
+                    context,
+                    icon: Icons.movie_creation_outlined,
+                    title: 'Video File',
+                    description:
+                        'Process an MP4 frame-by-frame with smoothed animal detection',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VideoFileScreen(),
+                      ),
+                    ),
+                  ),
+                ]),
+              ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    List<Widget> cards,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < cards.length; index++) ...[
+                  if (index > 0) const SizedBox(width: 12),
+                  cards[index],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: 190,
+      child: Card(
+        elevation: 4,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 40, color: Colors.brown),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScrollableCentered extends StatelessWidget {
+  const _ScrollableCentered({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: child),
         ),
       ),
     );

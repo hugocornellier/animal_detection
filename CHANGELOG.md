@@ -1,3 +1,14 @@
+## 3.0.1
+
+* Ship the `detectFromCameraFrame()` and `detectFromCameraImage()` APIs that
+  were described in the 3.0.0 changelog but landed immediately after that
+  release. Camera pixel conversion, rotation, downscaling, and inference stay
+  in the detector worker isolate.
+* Add live-camera, still-image, and smoothed video-file flows to the native
+  example, including the required platform permissions and registrations.
+  Normalize live-camera behavior and cover the new paths with camera-frame
+  parity, widget, and metrics tests.
+
 ## 3.0.0
 
 * Add the same public, opt-in CompiledModel configuration used by object, face,

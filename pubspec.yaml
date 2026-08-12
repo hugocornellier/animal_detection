@@ -1,6 +1,6 @@
 name: animal_detection
 description: "On-device animal detection, species classification, and body pose estimation using LiteRT (formerly TensorFlow Lite)."
-version: 3.0.0
+version: 3.0.1
 repository: https://github.com/hugocornellier/animal_detection
 
 topics:

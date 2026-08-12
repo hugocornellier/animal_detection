@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter/services.dart';
@@ -6,6 +7,7 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 
 import 'animal_detector_core.dart';
 import 'types.dart';
+import 'util/image_utils.dart';
 import 'util/model_downloader.dart';
 
 class _AnimalIsolateStartupData {
@@ -274,6 +276,39 @@ class AnimalDetector {
     return _deserializeAnimals(result);
   }
 
+  /// Detects animals directly from a camera frame prepared by flutter_litert.
+  ///
+  /// Colour conversion, optional rotation/downscaling, and inference all run
+  /// in this detector's worker isolate.
+  Future<List<Animal>> detectFromCameraFrame(
+    CameraFrame frame, {
+    int? maxDim,
+  }) async {
+    final result = await _requireWorker().sendRequest<List<dynamic>>(
+      'detectCameraFrame',
+      cameraFrameRpcFields(frame, {'maxDim': maxDim}),
+    );
+    return _deserializeAnimals(result);
+  }
+
+  /// Convenience wrapper accepting a package:camera `CameraImage`-shaped
+  /// object without taking a hard dependency on package:camera.
+  Future<List<Animal>> detectFromCameraImage(
+    Object cameraImage, {
+    CameraFrameRotation? rotation,
+    bool? isBgra,
+    int? maxDim,
+  }) async {
+    _requireWorker();
+    final frame = prepareCameraFrameFromImage(
+      cameraImage,
+      rotation: rotation,
+      isBgra: isBgra ?? Platform.isMacOS,
+    );
+    if (frame == null) return const <Animal>[];
+    return detectFromCameraFrame(frame, maxDim: maxDim);
+  }
+
   /// Releases the worker isolate and all native model resources.
   Future<void> dispose() async {
     final worker = _worker;
@@ -391,6 +426,28 @@ class AnimalDetector {
                 mat,
                 imageWidth: width,
                 imageHeight: height,
+              );
+              mainSendPort.send({
+                'id': id,
+                'result': animals.map((animal) => animal.toMap()).toList(),
+              });
+            } finally {
+              mat.dispose();
+            }
+          case 'detectCameraFrame':
+            final bytes = (message['bytes'] as TransferableTypedData)
+                .materialize()
+                .asUint8List();
+            final frame = cameraFrameFromRpcMessage(message, bytes);
+            final mat = ImageUtils.cameraFrameToBgrMat(
+              frame,
+              maxDim: message['maxDim'] as int?,
+            );
+            try {
+              final animals = await detector!.detectFromMat(
+                mat,
+                imageWidth: mat.cols,
+                imageHeight: mat.rows,
               );
               mainSendPort.send({
                 'id': id,

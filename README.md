@@ -275,6 +275,24 @@ final animals = await detector.detectFromMat(
 );
 ```
 
+## Live Camera Detection
+
+For real-time detection, pass each `camera` package image directly to the
+detector. Packing happens on the caller, while color conversion, rotation,
+downscaling, and inference stay in the detector worker isolate.
+
+```dart
+final animals = await detector.detectFromCameraImage(
+  cameraImage,
+  rotation: rotation,
+  isBgra: Platform.isMacOS,
+  maxDim: 640,
+);
+```
+
+For lower-level integrations, use `prepareCameraFrame(...)` followed by
+`detectFromCameraFrame(...)`.
+
 ## Background Isolates
 
 To run detection in a background isolate, use `initializeFromBuffers` to avoid asset loading issues:
@@ -312,5 +330,7 @@ Body detection and pose models based on [SuperAnimal](https://github.com/DeepLab
 
 ## Example
 
-The [sample code](https://pub.dev/packages/animal_detection/example) from the pub.dev example tab includes a
-Flutter app that paints detections onto an image: bounding boxes, species labels, and 24-point body pose keypoints.
+The [sample code](https://pub.dev/packages/animal_detection/example) includes
+matching live-camera, still-image, and video-file demos. All three paint body
+boxes, species labels, and 24-point pose keypoints; video output uses temporal
+smoothing and can be replayed in the app.

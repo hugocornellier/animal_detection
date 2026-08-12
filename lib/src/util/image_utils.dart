@@ -5,6 +5,117 @@ import '../types.dart';
 
 /// Utility functions for image preprocessing using OpenCV.
 class ImageUtils {
+  /// Rebuilds a [cv.Mat] from a backend-neutral packed camera-image layout.
+  static cv.Mat matFromPackedLayout(
+    PackedImageLayout layout,
+    Uint8List bytes,
+    cv.MatType type,
+  ) {
+    final mat = cv.Mat.create(
+      rows: layout.rows,
+      cols: layout.cols,
+      type: type,
+    );
+    try {
+      layout.copyTo(mat.data, bytes);
+      return mat;
+    } catch (_) {
+      mat.dispose();
+      rethrow;
+    }
+  }
+
+  /// Decodes a [CameraFrame] into a three-channel BGR [cv.Mat].
+  ///
+  /// The layout, stride handling, and safe operation order come from
+  /// flutter_litert. This method only maps that plan onto OpenCV primitives.
+  static cv.Mat cameraFrameToBgrMat(CameraFrame frame, {int? maxDim}) {
+    final plan = frame.decodePlan();
+    final source = matFromPackedLayout(
+      plan.sourceLayout,
+      frame.bytes,
+      plan.sourceLayout.channels == 4 ? cv.MatType.CV_8UC4 : cv.MatType.CV_8UC1,
+    );
+
+    cv.Mat maybeResize(cv.Mat mat) {
+      if (maxDim == null || (mat.cols <= maxDim && mat.rows <= maxDim)) {
+        return mat;
+      }
+      final scale = maxDim / (mat.cols > mat.rows ? mat.cols : mat.rows);
+      final resized = cv.resize(
+        mat,
+        ((mat.cols * scale).toInt(), (mat.rows * scale).toInt()),
+        interpolation: cv.INTER_LINEAR,
+      );
+      mat.dispose();
+      return resized;
+    }
+
+    int? rotateFlag() => switch (plan.rotation) {
+          CameraFrameRotation.cw90 => cv.ROTATE_90_CLOCKWISE,
+          CameraFrameRotation.cw180 => cv.ROTATE_180,
+          CameraFrameRotation.cw270 => cv.ROTATE_90_COUNTERCLOCKWISE,
+          null => null,
+        };
+
+    cv.Mat maybeRotate(cv.Mat mat) {
+      final flag = rotateFlag();
+      if (flag == null) return mat;
+      final rotated = cv.rotate(mat, flag);
+      mat.dispose();
+      return rotated;
+    }
+
+    final cvtCode = switch (plan.conversion) {
+      CameraFrameConversion.bgra2bgr => cv.COLOR_BGRA2BGR,
+      CameraFrameConversion.rgba2bgr => cv.COLOR_RGBA2BGR,
+      CameraFrameConversion.yuv2bgrNv12 => cv.COLOR_YUV2BGR_NV12,
+      CameraFrameConversion.yuv2bgrNv21 => cv.COLOR_YUV2BGR_NV21,
+      CameraFrameConversion.yuv2bgrI420 => cv.COLOR_YUV2BGR_I420,
+    };
+
+    switch (plan.order) {
+      case CameraFrameDecodeOrder.resizeRotateThenColorConvert:
+        cv.Mat current = plan.hasStridePadding
+            ? source.region(
+                cv.Rect(0, 0, plan.visibleWidth, plan.visibleHeight),
+              )
+            : source;
+
+        if (maxDim != null &&
+            (current.cols > maxDim || current.rows > maxDim)) {
+          final scale = maxDim /
+              (current.cols > current.rows ? current.cols : current.rows);
+          final resized = cv.resize(
+            current,
+            ((current.cols * scale).toInt(), (current.rows * scale).toInt()),
+            interpolation: cv.INTER_LINEAR,
+          );
+          if (!identical(current, source)) current.dispose();
+          current = resized;
+        }
+
+        final flag = rotateFlag();
+        if (flag != null) {
+          final rotated = cv.rotate(current, flag);
+          if (!identical(current, source)) current.dispose();
+          current = rotated;
+        }
+
+        final bgr = cv.cvtColor(current, cvtCode);
+        if (!identical(current, source)) current.dispose();
+        source.dispose();
+        return bgr;
+
+      case CameraFrameDecodeOrder.colorConvertThenResizeRotate:
+        cv.Mat current = cv.cvtColor(source, cvtCode);
+        source.dispose();
+        current = maybeResize(current);
+        current = maybeRotate(current);
+        return current;
+    }
+  }
+
   /// Per-channel mean values (R, G, B) used for ImageNet normalization.
   static const List<double> imagenetMean = [0.485, 0.456, 0.406];
 
