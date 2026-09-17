@@ -259,20 +259,31 @@ class AnimalDetector {
   /// Detects animals from a pre-decoded OpenCV matrix.
   ///
   /// The supplied matrix remains owned by the caller.
+  /// Accepts a non-continuous Mat, such as the view `mat.region(...)` returns.
+  /// `Mat.data` ignores row stride, so such a Mat is packed into a continuous
+  /// copy before its bytes are read; passing a cropped view is safe and needs
+  /// no `.clone()` at the call site. The supplied Mat is left untouched.
+  ///
   Future<List<Animal>> detectFromMat(
     cv.Mat image, {
     required int imageWidth,
     required int imageHeight,
   }) async {
+    // Mat.data ignores row stride, so a non-continuous Mat (e.g. an ROI view
+    // from region()) would ship scrambled pixels. Pack it into a continuous
+    // copy first; TransferableTypedData.fromList copies the bytes
+    // synchronously, so the clone can be disposed immediately after.
+    final cv.Mat src = image.isContinuous ? image : image.clone();
     final result = await _requireWorker().sendRequest<List<dynamic>>(
       'detectMat',
       {
-        'bytes': TransferableTypedData.fromList([image.data]),
+        'bytes': TransferableTypedData.fromList([src.data]),
         'width': imageWidth,
         'height': imageHeight,
-        'matType': image.type.value,
+        'matType': src.type.value,
       },
     );
+    if (!identical(src, image)) src.dispose();
     return _deserializeAnimals(result);
   }
 

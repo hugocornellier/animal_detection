@@ -1,0 +1,74 @@
+animal_detection
+Copyright 2026 Hugo Cornellier
+
+This package is licensed under the Apache License 2.0. See LICENSE.
+
+THE BUNDLED SuperAnimal MODEL FILES ARE AN EXCEPTION TO THAT LICENSE.
+
+These files are not covered by the Apache 2.0 license:
+
+    assets/models/superanimal_ssdlite_float16.tflite
+    assets/models/superanimal_rtmpose_s_float16.tflite
+
+So is the HRNet pose model this package downloads on demand:
+
+    superanimal_hrnet_w32_float16.tflite
+
+They are format conversions of the SuperAnimal-Quadruped checkpoints published
+by the Mathis Laboratory:
+
+    https://huggingface.co/mwmathis/DeepLabCutModelZoo-SuperAnimal-Quadruped
+
+Those weights are distributed under a "Modified MIT" license, Copyright 2023 by
+Mackenzie Mathis, Shaokai Ye, and contributors, which grants:
+
+    "a fully-paid, non-exclusive, and non-transferable license for academic,
+     non-commercial purposes only ... to use the MODEL weights"
+
+and further states:
+
+    "This software may not be used to harm any animal deliberately."
+
+ACADEMIC AND NON-COMMERCIAL USE ONLY.
+
+Using this package in a commercial product means running these weights, which
+that license does not permit. The Dart source code remains Apache 2.0 and may be
+used commercially with model weights you supply yourself.
+
+FOR COMMERCIAL USE
+
+Commercial permission is not this package author's to give; the license is
+explicitly non-transferable. The rights holders provide a route:
+
+    Prof. Mackenzie W. Mathis   mackenzie@post.harvard.edu
+    EPFL Technology Transfer    tto@epfl.ch
+
+REQUIRED CITATION
+
+Ye et al., "SuperAnimal pretrained pose estimation models for behavioral
+analysis": https://arxiv.org/abs/2203.07436v2
+
+    @article{ye2024superanimal,
+      title={SuperAnimal pretrained pose estimation models for
+             behavioral analysis},
+      author={Ye, Shaokai and Filippova, Anastasiia and Lauer, Jessy and
+              Schneider, Steffen and Vidal, Maxime and Qiu, Tian and
+              Mathis, Alexander and Mathis, Mackenzie Weygandt},
+      journal={Nature Communications},
+      volume={15},
+      number={1},
+      pages={5165},
+      year={2024},
+      doi={10.1038/s41467-024-48792-2}
+    }
+
+NOT AFFECTED
+
+    assets/models/species_classifier_float16.tflite
+
+is converted from torchvision's MobileNet_V3_Small_Weights.IMAGENET1K_V1, which
+is BSD-3-Clause and carries no non-commercial restriction.
+
+    assets/models/species_mapping.json
+
+is this package's own work and is covered by the Apache 2.0 license.

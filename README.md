@@ -326,7 +326,55 @@ If image decoding fails or no animals are detected, `detect()` returns an empty 
 
 ## Credits
 
-Body detection and pose models based on [SuperAnimal](https://github.com/DeepLabCut/DeepLabCut) pretrained models.
+The body detection and pose models are format conversions of the
+[SuperAnimal-Quadruped](https://huggingface.co/mwmathis/DeepLabCutModelZoo-SuperAnimal-Quadruped)
+checkpoints from the Mathis Laboratory, part of
+[DeepLabCut](https://github.com/DeepLabCut/DeepLabCut). If you use them, please
+cite:
+
+```bibtex
+@article{ye2024superanimal,
+  title={SuperAnimal pretrained pose estimation models for behavioral analysis},
+  author={Ye, Shaokai and Filippova, Anastasiia and Lauer, Jessy and
+          Schneider, Steffen and Vidal, Maxime and Qiu, Tian and
+          Mathis, Alexander and Mathis, Mackenzie Weygandt},
+  journal={Nature Communications},
+  volume={15},
+  number={1},
+  pages={5165},
+  year={2024},
+  doi={10.1038/s41467-024-48792-2}
+}
+```
+
+The species classifier is converted from torchvision's
+`MobileNet_V3_Small_Weights.IMAGENET1K_V1`.
+
+## License
+
+The Dart source code is **Apache 2.0**; see [`LICENSE`](LICENSE).
+
+**The bundled SuperAnimal models are an exception.**
+`assets/models/superanimal_ssdlite_float16.tflite`,
+`assets/models/superanimal_rtmpose_s_float16.tflite`, and the HRNet pose model
+downloaded on demand are format conversions of the Mathis Laboratory's
+SuperAnimal checkpoints. Those weights are licensed for **academic,
+non-commercial purposes only**, and the licence is explicitly
+**non-transferable**. It also forbids using the models to deliberately harm an
+animal. See [`NOTICE`](NOTICE).
+
+This means using this package in a commercial product is not something this
+licence permits, because doing so runs those weights. The Dart code stays
+Apache 2.0 and can be used commercially with pose and detection models you
+supply yourself.
+
+Commercial permission is not this package author's to give. The rights holders
+provide a route: Prof. Mackenzie W. Mathis (mackenzie@post.harvard.edu) and the
+EPFL Technology Transfer Office (tto@epfl.ch).
+
+Not affected: `species_classifier_float16.tflite` is BSD-3-Clause via
+torchvision, and `species_mapping.json` is this package's own work under
+Apache 2.0. Both are fine for commercial use.
 
 ## Example
 

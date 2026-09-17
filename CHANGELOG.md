@@ -1,3 +1,42 @@
+## 4.0.0
+
+* **The bundled SuperAnimal models are now correctly documented as
+  academic/non-commercial only.** The Dart source code remains Apache 2.0 and is
+  unchanged. Nothing about the models themselves is different from 3.0.1, and
+  this neither grants nor removes any right: it records the position accurately
+  for the first time.
+  `assets/models/superanimal_ssdlite_float16.tflite`,
+  `assets/models/superanimal_rtmpose_s_float16.tflite` and the on-demand HRNet
+  pose model are format conversions of the Mathis Laboratory's
+  SuperAnimal-Quadruped checkpoints. Those weights are licensed for academic,
+  non-commercial purposes only, the licence is explicitly non-transferable, and
+  it forbids using the models to deliberately harm an animal. The README badge
+  and LICENSE file previously implied Apache 2.0 covered everything shipped,
+  which was wrong. See the new `NOTICE`.
+* **Major version because this is material to anyone depending on the package.**
+  Nothing in the API changed, but a caret constraint on 3.x should not silently
+  carry a consumer into a non-commercial licence statement they did not choose
+  to read. Bumping the major forces that to be a deliberate upgrade.
+* **Commercial use has a route, and it is not through this package.** The rights
+  holders offer commercial licensing: Prof. Mackenzie W. Mathis
+  (mackenzie@post.harvard.edu) and the EPFL Technology Transfer Office
+  (tto@epfl.ch).
+* **The required SuperAnimal citation is now in the README**, which it should
+  have been from the start. Please cite Ye et al., Nature Communications 15,
+  5165 (2024).
+* Clarified that `species_classifier_float16.tflite` (torchvision,
+  BSD-3-Clause) and `species_mapping.json` (this package, Apache 2.0) carry no
+  such restriction.
+
+* **Fixed: a cropped `cv.Mat` passed to `detectFromMat` returned no detections.**
+  `Mat.data` ignores row stride, so a non-continuous Mat, which is what
+  `mat.region(...)` returns, was read as though its rows were tightly packed
+  and arrived scrambled. Passing a cropped view produced zero detections or
+  nonsense labels; the same crop with `.clone()` worked. Non-continuous input
+  is now packed automatically, so no `.clone()` is needed at the call site.
+  `face_detection_tflite`, `pose_detection` and `hand_detection` already
+  guarded against this; this brings the remaining packages in line.
+
 ## 3.0.1
 
 * Ship the `detectFromCameraFrame()` and `detectFromCameraImage()` APIs that
