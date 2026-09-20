@@ -1,6 +1,6 @@
 name: animal_detection
 description: "On-device animal detection, species classification, and body pose estimation using LiteRT (formerly TensorFlow Lite)."
-version: 4.0.0
+version: 4.1.0
 repository: https://github.com/hugocornellier/animal_detection
 
 topics:
@@ -11,15 +11,20 @@ topics:
   - on-device-ml
 
 environment:
-  sdk: ">=3.6.0 <4.0.0"
-  flutter: ">=3.22.0"
+  sdk: ">=3.10.0 <4.0.0"
+  # flutter_test in Flutter 3.44 and earlier pins meta 1.18.0, which cannot
+  # coexist with dartcv4 2.3.1 (meta ^1.19.0). 3.47.5 is the validated floor.
+  flutter: ">=3.47.5"
 
 dependencies:
   flutter:
     sdk: flutter
-  opencv_dart: ^2.2.1+4
-  flutter_litert: ^3.8.0
-  meta: ^1.17.0
+  opencv_dart: ^2.2.2
+  # Direct constraint so resolution can never fall back to a dartcv4 whose iOS
+  # CMake hook hardcodes a 12.0 deployment target (rejected by Xcode 27).
+  # No Dart source imports it; it is a compatibility floor only.
+  dartcv4: ^2.3.1
+  flutter_litert: ^3.9.0
   http: ^1.3.0
   path_provider: ^2.1.5
 
