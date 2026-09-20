@@ -170,8 +170,12 @@ void main() {
 
     test('round-trip all landmark types', () {
       for (final type in AnimalPoseLandmarkType.values) {
-        final original =
-            AnimalPoseLandmark(type: type, x: 50.0, y: 50.0, confidence: 0.5);
+        final original = AnimalPoseLandmark(
+          type: type,
+          x: 50.0,
+          y: 50.0,
+          confidence: 0.5,
+        );
         final restored = AnimalPoseLandmark.fromMap(original.toMap());
         expect(restored.type, type);
       }
@@ -242,9 +246,7 @@ void main() {
 
     test('hasLandmarks is true when landmarks are present', () {
       final pose = AnimalPose(
-        landmarks: [
-          makeLandmark(AnimalPoseLandmarkType.neckBase),
-        ],
+        landmarks: [makeLandmark(AnimalPoseLandmarkType.neckBase)],
       );
       expect(pose.hasLandmarks, true);
     });
@@ -269,9 +271,7 @@ void main() {
 
     test('getLandmark returns null when type not present', () {
       final pose = AnimalPose(
-        landmarks: [
-          makeLandmark(AnimalPoseLandmarkType.neckBase),
-        ],
+        landmarks: [makeLandmark(AnimalPoseLandmarkType.neckBase)],
       );
       final notFound = pose.getLandmark(AnimalPoseLandmarkType.tailEnd);
       expect(notFound, isNull);
@@ -311,12 +311,24 @@ void main() {
     test('toMap/fromMap round-trip with multiple landmarks', () {
       final original = AnimalPose(
         landmarks: [
-          makeLandmark(AnimalPoseLandmarkType.frontLeftPaw,
-              x: 30.0, y: 40.0, confidence: 0.7),
-          makeLandmark(AnimalPoseLandmarkType.backRightPaw,
-              x: 80.0, y: 90.0, confidence: 0.85),
-          makeLandmark(AnimalPoseLandmarkType.bellyBottom,
-              x: 50.0, y: 60.0, confidence: 0.6),
+          makeLandmark(
+            AnimalPoseLandmarkType.frontLeftPaw,
+            x: 30.0,
+            y: 40.0,
+            confidence: 0.7,
+          ),
+          makeLandmark(
+            AnimalPoseLandmarkType.backRightPaw,
+            x: 80.0,
+            y: 90.0,
+            confidence: 0.85,
+          ),
+          makeLandmark(
+            AnimalPoseLandmarkType.bellyBottom,
+            x: 50.0,
+            y: 60.0,
+            confidence: 0.6,
+          ),
         ],
       );
       final restored = AnimalPose.fromMap(original.toMap());
@@ -363,13 +375,15 @@ void main() {
       }
     });
 
-    test('all connection endpoints are valid AnimalPoseLandmarkType values',
-        () {
-      for (final connection in animalPoseConnections) {
-        expect(AnimalPoseLandmarkType.values.contains(connection[0]), true);
-        expect(AnimalPoseLandmarkType.values.contains(connection[1]), true);
-      }
-    });
+    test(
+      'all connection endpoints are valid AnimalPoseLandmarkType values',
+      () {
+        for (final connection in animalPoseConnections) {
+          expect(AnimalPoseLandmarkType.values.contains(connection[0]), true);
+          expect(AnimalPoseLandmarkType.values.contains(connection[1]), true);
+        }
+      },
+    );
 
     test('throat connection is present', () {
       expect(
@@ -568,15 +582,15 @@ void main() {
     BoundingBox makeBox() => BoundingBox.ltrb(10.0, 20.0, 200.0, 300.0);
 
     AnimalPose makePose() => AnimalPose(
-          landmarks: [
-            AnimalPoseLandmark(
-              type: AnimalPoseLandmarkType.neckBase,
-              x: 50.0,
-              y: 60.0,
-              confidence: 0.9,
-            ),
-          ],
-        );
+      landmarks: [
+        AnimalPoseLandmark(
+          type: AnimalPoseLandmarkType.neckBase,
+          x: 50.0,
+          y: 60.0,
+          confidence: 0.9,
+        ),
+      ],
+    );
 
     test('constructor with all fields stores them correctly', () {
       final pose = makePose();
@@ -635,21 +649,23 @@ void main() {
       expect(map.containsKey('imageHeight'), true);
     });
 
-    test('toMap encodes boundingBox as nested map with left/top/right/bottom',
-        () {
-      final animal = Animal(
-        boundingBox: BoundingBox.ltrb(1.0, 2.0, 3.0, 4.0),
-        score: 0.5,
-        imageWidth: 100,
-        imageHeight: 100,
-      );
-      final map = animal.toMap();
-      final bbMap = map['boundingBox'] as Map<String, dynamic>;
-      expect(bbMap['left'], 1.0);
-      expect(bbMap['top'], 2.0);
-      expect(bbMap['right'], 3.0);
-      expect(bbMap['bottom'], 4.0);
-    });
+    test(
+      'toMap encodes boundingBox as nested map with left/top/right/bottom',
+      () {
+        final animal = Animal(
+          boundingBox: BoundingBox.ltrb(1.0, 2.0, 3.0, 4.0),
+          score: 0.5,
+          imageWidth: 100,
+          imageHeight: 100,
+        );
+        final map = animal.toMap();
+        final bbMap = map['boundingBox'] as Map<String, dynamic>;
+        expect(bbMap['left'], 1.0);
+        expect(bbMap['top'], 2.0);
+        expect(bbMap['right'], 3.0);
+        expect(bbMap['bottom'], 4.0);
+      },
+    );
 
     test('toMap/fromMap round-trip with all fields', () {
       final original = Animal(
@@ -711,7 +727,9 @@ void main() {
       final restored = Animal.fromMap(original.toMap());
       expect(restored.pose!.landmarks.length, 1);
       expect(
-          restored.pose!.landmarks[0].type, AnimalPoseLandmarkType.backLeftPaw);
+        restored.pose!.landmarks[0].type,
+        AnimalPoseLandmarkType.backLeftPaw,
+      );
       expect(restored.pose!.landmarks[0].x, 77.0);
       expect(restored.pose!.landmarks[0].y, 88.0);
     });
@@ -769,8 +787,12 @@ void main() {
   // ---------------------------------------------------------------------------
   group('CropMetadata', () {
     test('constructor stores all fields correctly', () {
-      const meta =
-          CropMetadata(cx1: 10.0, cy1: 20.0, cropW: 150.0, cropH: 200.0);
+      const meta = CropMetadata(
+        cx1: 10.0,
+        cy1: 20.0,
+        cropW: 150.0,
+        cropH: 200.0,
+      );
       expect(meta.cx1, 10.0);
       expect(meta.cy1, 20.0);
       expect(meta.cropW, 150.0);
@@ -786,8 +808,12 @@ void main() {
     });
 
     test('fractional values are stored without loss', () {
-      const meta =
-          CropMetadata(cx1: 1.5, cy1: 2.75, cropW: 300.25, cropH: 400.125);
+      const meta = CropMetadata(
+        cx1: 1.5,
+        cy1: 2.75,
+        cropW: 300.25,
+        cropH: 400.125,
+      );
       expect(meta.cx1, 1.5);
       expect(meta.cy1, 2.75);
       expect(meta.cropW, 300.25);
@@ -795,8 +821,12 @@ void main() {
     });
 
     test('large values are stored correctly', () {
-      const meta =
-          CropMetadata(cx1: 3840.0, cy1: 2160.0, cropW: 1920.0, cropH: 1080.0);
+      const meta = CropMetadata(
+        cx1: 3840.0,
+        cy1: 2160.0,
+        cropW: 1920.0,
+        cropH: 1080.0,
+      );
       expect(meta.cx1, 3840.0);
       expect(meta.cy1, 2160.0);
       expect(meta.cropW, 1920.0);

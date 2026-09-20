@@ -97,14 +97,13 @@ abstract class SingleInterpreterModel {
     CompiledModel create(
       Set<Accelerator> requestedAccelerators, {
       required bool requestedForceCpu,
-    }) =>
-        compiledModelFromBufferAuto(
-          bytes,
-          accelerators: requestedAccelerators,
-          precision: precision,
-          forceCpu: requestedForceCpu,
-          onGpuFallback: onGpuFallback,
-        );
+    }) => compiledModelFromBufferAuto(
+      bytes,
+      accelerators: requestedAccelerators,
+      precision: precision,
+      forceCpu: requestedForceCpu,
+      onGpuFallback: onGpuFallback,
+    );
 
     var model = create(accelerators, requestedForceCpu: forceCpu);
     var verification = verifyCompiledModel(bytes, model);
@@ -118,10 +117,7 @@ abstract class SingleInterpreterModel {
           '$verification',
         ),
       );
-      model = create(
-        const {Accelerator.cpu},
-        requestedForceCpu: true,
-      );
+      model = create(const {Accelerator.cpu}, requestedForceCpu: true);
       verification = verifyCompiledModel(bytes, model);
     }
     if (!verification.agrees) {

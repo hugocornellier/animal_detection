@@ -42,8 +42,9 @@ Future<List<Animal>> _run(AnimalPoseModel poseModel) async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('HRNet keypoints agree with RTMPose on the same image',
-      (tester) async {
+  testWidgets('HRNet keypoints agree with RTMPose on the same image', (
+    tester,
+  ) async {
     final rtm = await _run(AnimalPoseModel.rtmpose);
     final hr = await _run(AnimalPoseModel.hrnet);
 
@@ -54,8 +55,11 @@ void main() {
     final b = hr.first.pose;
     expect(a, isNotNull);
     expect(b, isNotNull);
-    expect(b!.landmarks.length, a!.landmarks.length,
-        reason: 'both models predict the same keypoint set');
+    expect(
+      b!.landmarks.length,
+      a!.landmarks.length,
+      reason: 'both models predict the same keypoint set',
+    );
 
     // Both estimate the same anatomy, so corresponding keypoints should land
     // near each other. A transposed or mis-strided heatmap index would scatter
@@ -75,12 +79,16 @@ void main() {
     for (int i = 0; i < a.landmarks.length; i++) {
       final p = a.landmarks[i];
       final q = b.landmarks[i];
-      expect(q.x.isFinite && q.y.isFinite, isTrue,
-          reason: 'hrnet keypoint $i is not finite');
+      expect(
+        q.x.isFinite && q.y.isFinite,
+        isTrue,
+        reason: 'hrnet keypoint $i is not finite',
+      );
       expect(q.x, inInclusiveRange(-w, 2 * w));
       expect(q.y, inInclusiveRange(-h, 2 * h));
       dists.add(
-          math.sqrt((p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y)));
+        math.sqrt((p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y)),
+      );
     }
     dists.sort();
     final median = dists[dists.length ~/ 2];
@@ -90,16 +98,24 @@ void main() {
     double confMax(AnimalPose pose) =>
         pose.landmarks.map((l) => l.confidence).reduce((x, y) => x > y ? x : y);
 
-    debugPrint('HRNET n=${dists.length} median=${median.toStringAsFixed(1)}px '
-        'worst=${dists.last.toStringAsFixed(1)}px '
-        'tol=${tol.toStringAsFixed(1)}px image=${w.toInt()}x${h.toInt()}');
-    debugPrint('HRNET conf rtmpose=[${confMin(a).toStringAsFixed(3)}, '
-        '${confMax(a).toStringAsFixed(3)}] '
-        'hrnet=[${confMin(b).toStringAsFixed(3)}, '
-        '${confMax(b).toStringAsFixed(3)}]');
+    debugPrint(
+      'HRNET n=${dists.length} median=${median.toStringAsFixed(1)}px '
+      'worst=${dists.last.toStringAsFixed(1)}px '
+      'tol=${tol.toStringAsFixed(1)}px image=${w.toInt()}x${h.toInt()}',
+    );
+    debugPrint(
+      'HRNET conf rtmpose=[${confMin(a).toStringAsFixed(3)}, '
+      '${confMax(a).toStringAsFixed(3)}] '
+      'hrnet=[${confMin(b).toStringAsFixed(3)}, '
+      '${confMax(b).toStringAsFixed(3)}]',
+    );
 
-    expect(median, lessThan(tol),
-        reason: 'hrnet keypoints diverge from rtmpose beyond plausible model '
-            'disagreement, which is what a bad heatmap index looks like');
+    expect(
+      median,
+      lessThan(tol),
+      reason:
+          'hrnet keypoints diverge from rtmpose beyond plausible model '
+          'disagreement, which is what a bad heatmap index looks like',
+    );
   }, timeout: const Timeout(Duration(minutes: 10)));
 }

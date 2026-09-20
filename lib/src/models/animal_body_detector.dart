@@ -69,8 +69,10 @@ class AnimalBodyDetector extends SingleInterpreterModel {
     );
     assertSquareInputSize(interpreter!, inputSize, 'AnimalBodyDetector');
     _flatInput = Float32List(inputSize * inputSize * 3);
-    _outputTensorShapes =
-        interpreter!.getOutputTensors().map((t) => t.shape).toList();
+    _outputTensorShapes = interpreter!
+        .getOutputTensors()
+        .map((t) => t.shape)
+        .toList();
     _outputBuffers = [
       for (final shape in _outputTensorShapes)
         Float32List(shape.reduce((a, b) => a * b)),
@@ -137,8 +139,10 @@ class AnimalBodyDetector extends SingleInterpreterModel {
     );
     assertSquareInputSize(interpreter!, inputSize, 'AnimalBodyDetector');
     _flatInput = Float32List(inputSize * inputSize * 3);
-    _outputTensorShapes =
-        interpreter!.getOutputTensors().map((t) => t.shape).toList();
+    _outputTensorShapes = interpreter!
+        .getOutputTensors()
+        .map((t) => t.shape)
+        .toList();
     _outputBuffers = [
       for (final shape in _outputTensorShapes)
         Float32List(shape.reduce((a, b) => a * b)),
@@ -271,14 +275,22 @@ class AnimalBodyDetector extends SingleInterpreterModel {
     final double scaleY = origH / inputSize;
     final boxesOrig = Float64List(_totalAnchors * 4);
     for (int i = 0; i < _totalAnchors; i++) {
-      final double x1 =
-          (boxes320[i * 4 + 0] * scaleX).clamp(0.0, origW.toDouble());
-      final double y1 =
-          (boxes320[i * 4 + 1] * scaleY).clamp(0.0, origH.toDouble());
-      final double x2 =
-          (boxes320[i * 4 + 2] * scaleX).clamp(0.0, origW.toDouble());
-      final double y2 =
-          (boxes320[i * 4 + 3] * scaleY).clamp(0.0, origH.toDouble());
+      final double x1 = (boxes320[i * 4 + 0] * scaleX).clamp(
+        0.0,
+        origW.toDouble(),
+      );
+      final double y1 = (boxes320[i * 4 + 1] * scaleY).clamp(
+        0.0,
+        origH.toDouble(),
+      );
+      final double x2 = (boxes320[i * 4 + 2] * scaleX).clamp(
+        0.0,
+        origW.toDouble(),
+      );
+      final double y2 = (boxes320[i * 4 + 3] * scaleY).clamp(
+        0.0,
+        origH.toDouble(),
+      );
       boxesOrig[i * 4 + 0] = x1;
       boxesOrig[i * 4 + 1] = y1;
       boxesOrig[i * 4 + 2] = x2;
@@ -329,10 +341,14 @@ class AnimalBodyDetector extends SingleInterpreterModel {
 
       final double dx = regFlat[o + 0] / _wx;
       final double dy = regFlat[o + 1] / _wy;
-      final double dw =
-          (regFlat[o + 2] / _ww).clamp(double.negativeInfinity, _bboxClip);
-      final double dh =
-          (regFlat[o + 3] / _wh).clamp(double.negativeInfinity, _bboxClip);
+      final double dw = (regFlat[o + 2] / _ww).clamp(
+        double.negativeInfinity,
+        _bboxClip,
+      );
+      final double dh = (regFlat[o + 3] / _wh).clamp(
+        double.negativeInfinity,
+        _bboxClip,
+      );
 
       final double predCx = dx * aw + acx;
       final double predCy = dy * ah + acy;

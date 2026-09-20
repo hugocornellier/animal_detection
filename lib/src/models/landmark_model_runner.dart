@@ -63,7 +63,10 @@ class LandmarkModelRunnerBase {
       (options, _) async {
         final interpreter = await Interpreter.fromAsset(path, options: options);
         assertSquareInputSize(
-            interpreter, inputSize, 'LandmarkModelRunnerBase');
+          interpreter,
+          inputSize,
+          'LandmarkModelRunnerBase',
+        );
         interpreter.resizeInputTensor(0, [1, inputSize, inputSize, 3]);
         interpreter.allocateTensors();
         return interpreter;
@@ -83,7 +86,10 @@ class LandmarkModelRunnerBase {
       (options, _) async {
         final interpreter = Interpreter.fromBuffer(bytes, options: options);
         assertSquareInputSize(
-            interpreter, inputSize, 'LandmarkModelRunnerBase');
+          interpreter,
+          inputSize,
+          'LandmarkModelRunnerBase',
+        );
         interpreter.resizeInputTensor(0, [1, inputSize, inputSize, 3]);
         interpreter.allocateTensors();
         return interpreter;
@@ -114,14 +120,13 @@ class LandmarkModelRunnerBase {
       CompiledModel create(
         Set<Accelerator> requestedAccelerators, {
         required bool requestedForceCpu,
-      }) =>
-          compiledModelFromBufferAuto(
-            bytes,
-            accelerators: requestedAccelerators,
-            precision: precision,
-            forceCpu: requestedForceCpu,
-            onGpuFallback: onGpuFallback,
-          );
+      }) => compiledModelFromBufferAuto(
+        bytes,
+        accelerators: requestedAccelerators,
+        precision: precision,
+        forceCpu: requestedForceCpu,
+        onGpuFallback: onGpuFallback,
+      );
 
       var model = create(accelerators, requestedForceCpu: forceCpu);
       var verification = verifyCompiledModel(bytes, model);
@@ -135,10 +140,7 @@ class LandmarkModelRunnerBase {
             '$verification',
           ),
         );
-        model = create(
-          const {Accelerator.cpu},
-          requestedForceCpu: true,
-        );
+        model = create(const {Accelerator.cpu}, requestedForceCpu: true);
         verification = verifyCompiledModel(bytes, model);
       }
       if (!verification.agrees) {
@@ -194,8 +196,10 @@ class LandmarkModelRunnerBase {
       for (int i = 0; i < numLandmarks; i++) {
         final xNorm = out[i * 2].clamp(0.0, 1.0);
         final yNorm = out[i * 2 + 1].clamp(0.0, 1.0);
-        coords.add(
-            (xNorm * meta.cropW + meta.cx1, yNorm * meta.cropH + meta.cy1));
+        coords.add((
+          xNorm * meta.cropW + meta.cx1,
+          yNorm * meta.cropH + meta.cy1,
+        ));
       }
 
       return coords;
@@ -220,8 +224,10 @@ class LandmarkModelRunnerBase {
       for (int i = 0; i < numLandmarks; i++) {
         final xNorm = raw[i * 2].clamp(0.0, 1.0);
         final yNorm = raw[i * 2 + 1].clamp(0.0, 1.0);
-        coords.add(
-            (xNorm * meta.cropW + meta.cx1, yNorm * meta.cropH + meta.cy1));
+        coords.add((
+          xNorm * meta.cropW + meta.cx1,
+          yNorm * meta.cropH + meta.cy1,
+        ));
       }
       return coords;
     });

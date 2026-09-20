@@ -76,10 +76,7 @@ class AnimalDetector {
     PerformanceConfig? posePerformanceConfig,
     void Function(String model, int received, int total)? onDownloadProgress,
     bool useCompiledModel = false,
-    Set<Accelerator> accelerators = const {
-      Accelerator.gpu,
-      Accelerator.cpu,
-    },
+    Set<Accelerator> accelerators = const {Accelerator.gpu, Accelerator.cpu},
     Precision precision = Precision.fp32,
   }) async {
     final detector = AnimalDetector(
@@ -136,10 +133,7 @@ class AnimalDetector {
   Future<void> initialize({
     void Function(String model, int received, int total)? onDownloadProgress,
     bool useCompiledModel = false,
-    Set<Accelerator> accelerators = const {
-      Accelerator.gpu,
-      Accelerator.cpu,
-    },
+    Set<Accelerator> accelerators = const {Accelerator.gpu, Accelerator.cpu},
     Precision precision = Precision.fp32,
   }) async {
     final modelData = await Future.wait<ByteData>([
@@ -163,10 +157,10 @@ class AnimalDetector {
           onProgress: onDownloadProgress == null
               ? null
               : (received, total) => onDownloadProgress(
-                    ModelDownloader.modelHrnet,
-                    received,
-                    total,
-                  ),
+                  ModelDownloader.modelHrnet,
+                  received,
+                  total,
+                ),
         );
       } else {
         final data = await rootBundle.load(
@@ -201,10 +195,7 @@ class AnimalDetector {
     bool useIsolateInterpreter = true,
     bool useCompiledModel = false,
     bool compiledForceCpu = false,
-    Set<Accelerator> accelerators = const {
-      Accelerator.gpu,
-      Accelerator.cpu,
-    },
+    Set<Accelerator> accelerators = const {Accelerator.gpu, Accelerator.cpu},
     Precision precision = Precision.fp32,
   }) async {
     if (_worker != null) await dispose();
@@ -217,9 +208,7 @@ class AnimalDetector {
           bodyDetectorBytes: TransferableTypedData.fromList([
             bodyDetectorBytes,
           ]),
-          classifierBytes: TransferableTypedData.fromList([
-            classifierBytes,
-          ]),
+          classifierBytes: TransferableTypedData.fromList([classifierBytes]),
           speciesMappingJson: speciesMappingJson,
           poseModelBytes: poseModelBytes == null
               ? null
@@ -247,12 +236,9 @@ class AnimalDetector {
 
   /// Detects animals from encoded JPEG, PNG, or other OpenCV image bytes.
   Future<List<Animal>> detect(Uint8List imageBytes) async {
-    final result = await _requireWorker().sendRequest<List<dynamic>>(
-      'detect',
-      {
-        'bytes': TransferableTypedData.fromList([imageBytes])
-      },
-    );
+    final result = await _requireWorker().sendRequest<List<dynamic>>('detect', {
+      'bytes': TransferableTypedData.fromList([imageBytes]),
+    });
     return _deserializeAnimals(result);
   }
 
@@ -397,7 +383,8 @@ class AnimalDetector {
       mainSendPort.send(workerReceivePort.sendPort);
     } catch (error, stackTrace) {
       mainSendPort.send({
-        'error': 'Animal detection isolate initialization failed: '
+        'error':
+            'Animal detection isolate initialization failed: '
             '$error\n$stackTrace',
       });
       return;

@@ -129,17 +129,18 @@ class AnimalPoseLandmark {
 
   /// Serializes this pose landmark to a map for cross-isolate transfer.
   Map<String, dynamic> toMap() => {
-        'type': type.name,
-        'x': x,
-        'y': y,
-        'confidence': confidence,
-      };
+    'type': type.name,
+    'x': x,
+    'y': y,
+    'confidence': confidence,
+  };
 
   /// Deserializes a pose landmark from a map.
   static AnimalPoseLandmark fromMap(Map<String, dynamic> map) =>
       AnimalPoseLandmark(
-        type: AnimalPoseLandmarkType.values
-            .firstWhere((e) => e.name == map['type']),
+        type: AnimalPoseLandmarkType.values.firstWhere(
+          (e) => e.name == map['type'],
+        ),
         x: (map['x'] as num).toDouble(),
         y: (map['y'] as num).toDouble(),
         confidence: (map['confidence'] as num).toDouble(),
@@ -171,15 +172,15 @@ class AnimalPose {
 
   /// Serializes this pose to a map for cross-isolate transfer.
   Map<String, dynamic> toMap() => {
-        'landmarks': landmarks.map((l) => l.toMap()).toList(),
-      };
+    'landmarks': landmarks.map((l) => l.toMap()).toList(),
+  };
 
   /// Deserializes an animal pose from a map.
   static AnimalPose fromMap(Map<String, dynamic> map) => AnimalPose(
-        landmarks: (map['landmarks'] as List)
-            .map((l) => AnimalPoseLandmark.fromMap(l as Map<String, dynamic>))
-            .toList(),
-      );
+    landmarks: (map['landmarks'] as List)
+        .map((l) => AnimalPoseLandmark.fromMap(l as Map<String, dynamic>))
+        .toList(),
+  );
 }
 
 /// Defines the standard skeleton connections between SuperAnimal body keypoints.
@@ -260,39 +261,39 @@ class Animal {
 
   /// Serializes this result to a map for cross-isolate transfer.
   Map<String, dynamic> toMap() => {
-        'boundingBox': {
-          'left': boundingBox.left,
-          'top': boundingBox.top,
-          'right': boundingBox.right,
-          'bottom': boundingBox.bottom
-        },
-        'score': score,
-        'species': species,
-        'breed': breed,
-        'speciesConfidence': speciesConfidence,
-        'pose': pose?.toMap(),
-        'imageWidth': imageWidth,
-        'imageHeight': imageHeight,
-      };
+    'boundingBox': {
+      'left': boundingBox.left,
+      'top': boundingBox.top,
+      'right': boundingBox.right,
+      'bottom': boundingBox.bottom,
+    },
+    'score': score,
+    'species': species,
+    'breed': breed,
+    'speciesConfidence': speciesConfidence,
+    'pose': pose?.toMap(),
+    'imageWidth': imageWidth,
+    'imageHeight': imageHeight,
+  };
 
   /// Deserializes an animal detection result from a map.
   static Animal fromMap(Map<String, dynamic> map) => Animal(
-        boundingBox: BoundingBox.ltrb(
-          (map['boundingBox']['left'] as num).toDouble(),
-          (map['boundingBox']['top'] as num).toDouble(),
-          (map['boundingBox']['right'] as num).toDouble(),
-          (map['boundingBox']['bottom'] as num).toDouble(),
-        ),
-        score: (map['score'] as num).toDouble(),
-        species: map['species'] as String?,
-        breed: map['breed'] as String?,
-        speciesConfidence: (map['speciesConfidence'] as num?)?.toDouble(),
-        pose: map['pose'] != null
-            ? AnimalPose.fromMap(map['pose'] as Map<String, dynamic>)
-            : null,
-        imageWidth: map['imageWidth'] as int,
-        imageHeight: map['imageHeight'] as int,
-      );
+    boundingBox: BoundingBox.ltrb(
+      (map['boundingBox']['left'] as num).toDouble(),
+      (map['boundingBox']['top'] as num).toDouble(),
+      (map['boundingBox']['right'] as num).toDouble(),
+      (map['boundingBox']['bottom'] as num).toDouble(),
+    ),
+    score: (map['score'] as num).toDouble(),
+    species: map['species'] as String?,
+    breed: map['breed'] as String?,
+    speciesConfidence: (map['speciesConfidence'] as num?)?.toDouble(),
+    pose: map['pose'] != null
+        ? AnimalPose.fromMap(map['pose'] as Map<String, dynamic>)
+        : null,
+    imageWidth: map['imageWidth'] as int,
+    imageHeight: map['imageHeight'] as int,
+  );
 
   @override
   String toString() =>

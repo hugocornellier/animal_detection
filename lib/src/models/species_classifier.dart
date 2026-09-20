@@ -60,10 +60,7 @@ class SpeciesClassifier extends SingleInterpreterModel {
     Uint8List modelBytes,
     String mappingJson, {
     bool forceCpu = false,
-    Set<Accelerator> accelerators = const {
-      Accelerator.gpu,
-      Accelerator.cpu,
-    },
+    Set<Accelerator> accelerators = const {Accelerator.gpu, Accelerator.cpu},
     Precision precision = Precision.fp32,
     void Function(Object error)? onGpuFallback,
   }) async {

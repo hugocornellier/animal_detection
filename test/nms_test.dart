@@ -44,19 +44,21 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('scores exactly at threshold are NOT kept (strictly greater than)',
-        () {
-      final result = nonMaxSuppression(
-        boxes: makeBoxes([
-          [0.0, 0.0, 10.0, 10.0]
-        ]),
-        scores: makeScores([0.5]),
-        iouThreshold: 0.5,
-        scoreThreshold: 0.5,
-      );
-      // score 0.5 is NOT > 0.5, so it should be filtered out
-      expect(result, isEmpty);
-    });
+    test(
+      'scores exactly at threshold are NOT kept (strictly greater than)',
+      () {
+        final result = nonMaxSuppression(
+          boxes: makeBoxes([
+            [0.0, 0.0, 10.0, 10.0],
+          ]),
+          scores: makeScores([0.5]),
+          iouThreshold: 0.5,
+          scoreThreshold: 0.5,
+        );
+        // score 0.5 is NOT > 0.5, so it should be filtered out
+        expect(result, isEmpty);
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -66,7 +68,7 @@ void main() {
     test('single box above threshold is kept', () {
       final result = nonMaxSuppression(
         boxes: makeBoxes([
-          [10.0, 10.0, 50.0, 50.0]
+          [10.0, 10.0, 50.0, 50.0],
         ]),
         scores: makeScores([0.9]),
         iouThreshold: 0.5,
@@ -78,7 +80,7 @@ void main() {
     test('single box below threshold is not kept', () {
       final result = nonMaxSuppression(
         boxes: makeBoxes([
-          [10.0, 10.0, 50.0, 50.0]
+          [10.0, 10.0, 50.0, 50.0],
         ]),
         scores: makeScores([0.1]),
         iouThreshold: 0.5,
@@ -155,22 +157,23 @@ void main() {
     });
 
     test(
-        'identical boxes: lower-score box is suppressed regardless of threshold',
-        () {
-      final result = nonMaxSuppression(
-        boxes: makeBoxes([
-          [5.0, 5.0, 15.0, 15.0],
-          [5.0, 5.0, 15.0, 15.0],
-          [5.0, 5.0, 15.0, 15.0],
-        ]),
-        scores: makeScores([0.6, 0.9, 0.75]),
-        iouThreshold: 0.5,
-        scoreThreshold: 0.3,
-      );
-      // index 1 has highest score (0.9), all others are suppressed
-      expect(result.length, 1);
-      expect(result[0], 1);
-    });
+      'identical boxes: lower-score box is suppressed regardless of threshold',
+      () {
+        final result = nonMaxSuppression(
+          boxes: makeBoxes([
+            [5.0, 5.0, 15.0, 15.0],
+            [5.0, 5.0, 15.0, 15.0],
+            [5.0, 5.0, 15.0, 15.0],
+          ]),
+          scores: makeScores([0.6, 0.9, 0.75]),
+          iouThreshold: 0.5,
+          scoreThreshold: 0.3,
+        );
+        // index 1 has highest score (0.9), all others are suppressed
+        expect(result.length, 1);
+        expect(result[0], 1);
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -180,37 +183,40 @@ void main() {
     // Box A: [0,0,10,10] area=100
     // Box B: [5,0,15,10] area=100, intersection=[5,0,10,10]=50
     // IoU = 50 / (100 + 100 - 50) = 50/150 ≈ 0.333
-    test('partially overlapping boxes with IoU below threshold are both kept',
-        () {
-      final result = nonMaxSuppression(
-        boxes: makeBoxes([
-          [0.0, 0.0, 10.0, 10.0],
-          [5.0, 0.0, 15.0, 10.0],
-        ]),
-        scores: makeScores([0.9, 0.8]),
-        iouThreshold: 0.5, // IoU ≈ 0.333 < 0.5
-        scoreThreshold: 0.3,
-      );
-      expect(result.length, 2);
-      expect(result.contains(0), true);
-      expect(result.contains(1), true);
-    });
+    test(
+      'partially overlapping boxes with IoU below threshold are both kept',
+      () {
+        final result = nonMaxSuppression(
+          boxes: makeBoxes([
+            [0.0, 0.0, 10.0, 10.0],
+            [5.0, 0.0, 15.0, 10.0],
+          ]),
+          scores: makeScores([0.9, 0.8]),
+          iouThreshold: 0.5, // IoU ≈ 0.333 < 0.5
+          scoreThreshold: 0.3,
+        );
+        expect(result.length, 2);
+        expect(result.contains(0), true);
+        expect(result.contains(1), true);
+      },
+    );
 
     test(
-        'partially overlapping boxes with IoU above threshold: lower score suppressed',
-        () {
-      final result = nonMaxSuppression(
-        boxes: makeBoxes([
-          [0.0, 0.0, 10.0, 10.0],
-          [5.0, 0.0, 15.0, 10.0],
-        ]),
-        scores: makeScores([0.9, 0.8]),
-        iouThreshold: 0.3, // IoU ≈ 0.333 > 0.3
-        scoreThreshold: 0.3,
-      );
-      expect(result.length, 1);
-      expect(result[0], 0); // index 0 has higher score
-    });
+      'partially overlapping boxes with IoU above threshold: lower score suppressed',
+      () {
+        final result = nonMaxSuppression(
+          boxes: makeBoxes([
+            [0.0, 0.0, 10.0, 10.0],
+            [5.0, 0.0, 15.0, 10.0],
+          ]),
+          scores: makeScores([0.9, 0.8]),
+          iouThreshold: 0.3, // IoU ≈ 0.333 > 0.3
+          scoreThreshold: 0.3,
+        );
+        expect(result.length, 1);
+        expect(result[0], 0); // index 0 has higher score
+      },
+    );
 
     // Box A: [0,0,10,10] area=100
     // Box B: [2,2,8,8] area=36, intersection=[2,2,8,8]=36
@@ -265,22 +271,23 @@ void main() {
     });
 
     test(
-        'highest-score box is always the one kept when duplicates are suppressed',
-        () {
-      // Box at same location with 3 different scores
-      final result = nonMaxSuppression(
-        boxes: makeBoxes([
-          [0.0, 0.0, 10.0, 10.0], // score 0.6
-          [0.0, 0.0, 10.0, 10.0], // score 0.95
-          [0.0, 0.0, 10.0, 10.0], // score 0.4
-        ]),
-        scores: makeScores([0.6, 0.95, 0.4]),
-        iouThreshold: 0.5,
-        scoreThreshold: 0.3,
-      );
-      expect(result.length, 1);
-      expect(result[0], 1); // index 1 has score 0.95
-    });
+      'highest-score box is always the one kept when duplicates are suppressed',
+      () {
+        // Box at same location with 3 different scores
+        final result = nonMaxSuppression(
+          boxes: makeBoxes([
+            [0.0, 0.0, 10.0, 10.0], // score 0.6
+            [0.0, 0.0, 10.0, 10.0], // score 0.95
+            [0.0, 0.0, 10.0, 10.0], // score 0.4
+          ]),
+          scores: makeScores([0.6, 0.95, 0.4]),
+          iouThreshold: 0.5,
+          scoreThreshold: 0.3,
+        );
+        expect(result.length, 1);
+        expect(result[0], 1); // index 1 has score 0.95
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -308,48 +315,51 @@ void main() {
       expect(result.length, 2);
     });
 
-    test('mixed scenario: some below threshold, some suppressed, some kept',
-        () {
-      final result = nonMaxSuppression(
-        boxes: makeBoxes([
-          [0.0, 0.0, 10.0, 10.0], // score 0.1, below threshold
-          [50.0, 50.0, 60.0, 60.0], // score 0.9, kept
-          [51.0, 51.0, 61.0, 61.0], // score 0.8, suppressed by box 1
-          [200.0, 200.0, 210.0, 210.0], // score 0.7, kept (no overlap)
-        ]),
-        scores: makeScores([0.1, 0.9, 0.8, 0.7]),
-        iouThreshold: 0.3,
-        scoreThreshold: 0.3,
-      );
-      expect(result.contains(0), false); // below threshold
-      expect(result.contains(1), true);
-      expect(result.contains(2), false); // suppressed
-      expect(result.contains(3), true);
-      expect(result.length, 2);
-    });
+    test(
+      'mixed scenario: some below threshold, some suppressed, some kept',
+      () {
+        final result = nonMaxSuppression(
+          boxes: makeBoxes([
+            [0.0, 0.0, 10.0, 10.0], // score 0.1, below threshold
+            [50.0, 50.0, 60.0, 60.0], // score 0.9, kept
+            [51.0, 51.0, 61.0, 61.0], // score 0.8, suppressed by box 1
+            [200.0, 200.0, 210.0, 210.0], // score 0.7, kept (no overlap)
+          ]),
+          scores: makeScores([0.1, 0.9, 0.8, 0.7]),
+          iouThreshold: 0.3,
+          scoreThreshold: 0.3,
+        );
+        expect(result.contains(0), false); // below threshold
+        expect(result.contains(1), true);
+        expect(result.contains(2), false); // suppressed
+        expect(result.contains(3), true);
+        expect(result.length, 2);
+      },
+    );
 
     test(
-        'chain suppression: winner from first cluster does not suppress distant cluster',
-        () {
-      // Cluster A: boxes 0 (0.9) and 1 (0.8) are overlapping
-      // Cluster B: boxes 2 (0.85) and 3 (0.6) are overlapping, far from cluster A
-      final result = nonMaxSuppression(
-        boxes: makeBoxes([
-          [0.0, 0.0, 10.0, 10.0], // cluster A, score 0.9
-          [1.0, 0.0, 11.0, 10.0], // cluster A, score 0.8, suppressed
-          [500.0, 0.0, 510.0, 10.0], // cluster B, score 0.85
-          [501.0, 0.0, 511.0, 10.0], // cluster B, score 0.6, suppressed
-        ]),
-        scores: makeScores([0.9, 0.8, 0.85, 0.6]),
-        iouThreshold: 0.3,
-        scoreThreshold: 0.3,
-      );
-      expect(result.length, 2);
-      expect(result.contains(0), true);
-      expect(result.contains(2), true);
-      expect(result.contains(1), false);
-      expect(result.contains(3), false);
-    });
+      'chain suppression: winner from first cluster does not suppress distant cluster',
+      () {
+        // Cluster A: boxes 0 (0.9) and 1 (0.8) are overlapping
+        // Cluster B: boxes 2 (0.85) and 3 (0.6) are overlapping, far from cluster A
+        final result = nonMaxSuppression(
+          boxes: makeBoxes([
+            [0.0, 0.0, 10.0, 10.0], // cluster A, score 0.9
+            [1.0, 0.0, 11.0, 10.0], // cluster A, score 0.8, suppressed
+            [500.0, 0.0, 510.0, 10.0], // cluster B, score 0.85
+            [501.0, 0.0, 511.0, 10.0], // cluster B, score 0.6, suppressed
+          ]),
+          scores: makeScores([0.9, 0.8, 0.85, 0.6]),
+          iouThreshold: 0.3,
+          scoreThreshold: 0.3,
+        );
+        expect(result.length, 2);
+        expect(result.contains(0), true);
+        expect(result.contains(2), true);
+        expect(result.contains(1), false);
+        expect(result.contains(3), false);
+      },
+    );
 
     test('high iou threshold keeps more boxes', () {
       final result = nonMaxSuppression(

@@ -52,7 +52,8 @@ void main() {
       expect(
         worst,
         lessThan(tolerance),
-        reason: 'anchor $worstIndex diverges from the exported table by $worst '
+        reason:
+            'anchor $worstIndex diverges from the exported table by $worst '
             'px, above the ${tolerance}px rounding budget',
       );
     });
@@ -76,9 +77,11 @@ void main() {
       // Within each location the exported order is:
       //   [ratio 1.0 @ scale, ratio 1.0 @ interpolated scale, 2.0, 0.5, 3.0, 1/3]
       // so slot 1 is square and strictly larger than slot 0.
-      for (int block = 0;
-          block < expectedAnchors;
-          block += anchorsPerLocation) {
+      for (
+        int block = 0;
+        block < expectedAnchors;
+        block += anchorsPerLocation
+      ) {
         final int a = block * 4;
         final int b = (block + 1) * 4;
         expect(ssdAnchors[a + 2], closeTo(ssdAnchors[a + 3], tolerance));

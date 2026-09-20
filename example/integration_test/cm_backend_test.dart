@@ -56,10 +56,12 @@ void main() {
 
   testWidgets('interpreter backend detects', (tester) async {
     final r = await _run(useCompiledModel: false);
-    debugPrint('CMB interpreter: ${r.length} animal(s)'
-        '${r.isEmpty ? '' : ' species=${r.first.species} '
-            'score=${r.first.score.toStringAsFixed(4)} '
-            'pose=${r.first.pose?.landmarks.length}'}');
+    debugPrint(
+      'CMB interpreter: ${r.length} animal(s)'
+      '${r.isEmpty ? '' : ' species=${r.first.species} '
+                'score=${r.first.score.toStringAsFixed(4)} '
+                'pose=${r.first.pose?.landmarks.length}'}',
+    );
     expect(r, isNotEmpty);
   }, timeout: const Timeout(Duration(minutes: 5)));
 
@@ -71,10 +73,12 @@ void main() {
       debugPrint('CMB compiled FAILED: $e');
       rethrow;
     }
-    debugPrint('CMB compiled: ${r.length} animal(s)'
-        '${r.isEmpty ? '' : ' species=${r.first.species} '
-            'score=${r.first.score.toStringAsFixed(4)} '
-            'pose=${r.first.pose?.landmarks.length}'}');
+    debugPrint(
+      'CMB compiled: ${r.length} animal(s)'
+      '${r.isEmpty ? '' : ' species=${r.first.species} '
+                'score=${r.first.score.toStringAsFixed(4)} '
+                'pose=${r.first.pose?.landmarks.length}'}',
+    );
     expect(r, isNotEmpty);
   }, timeout: const Timeout(Duration(minutes: 5)));
 }

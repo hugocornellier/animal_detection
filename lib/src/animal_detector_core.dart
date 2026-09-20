@@ -175,10 +175,7 @@ class AnimalDetectorCore {
     bool useIsolateInterpreter = true,
     bool useCompiledModel = false,
     bool compiledForceCpu = false,
-    Set<Accelerator> accelerators = const {
-      Accelerator.gpu,
-      Accelerator.cpu,
-    },
+    Set<Accelerator> accelerators = const {Accelerator.gpu, Accelerator.cpu},
     Precision precision = Precision.fp32,
   }) async {
     if (_isInitialized) {
@@ -310,7 +307,8 @@ class AnimalDetectorCore {
   Future<List<Animal>> detect(Uint8List imageBytes) async {
     if (!_isInitialized) {
       throw StateError(
-          'AnimalDetector not initialized. Call initialize() first.');
+        'AnimalDetector not initialized. Call initialize() first.',
+      );
     }
     try {
       final mat = cv.imdecode(imageBytes, cv.IMREAD_COLOR);
@@ -343,7 +341,8 @@ class AnimalDetectorCore {
   }) async {
     if (!_isInitialized) {
       throw StateError(
-          'AnimalDetector not initialized. Call initialize() first.');
+        'AnimalDetector not initialized. Call initialize() first.',
+      );
     }
 
     // Stage 1: SSD body detection
@@ -366,12 +365,7 @@ class AnimalDetectorCore {
       final origBh = (bbox.bottom - bbox.top).toInt();
       if (origBw >= 1 && origBh >= 1) {
         final classifyCrop = image.region(
-          cv.Rect(
-            bbox.left.toInt(),
-            bbox.top.toInt(),
-            origBw,
-            origBh,
-          ),
+          cv.Rect(bbox.left.toInt(), bbox.top.toInt(), origBw, origBh),
         );
         try {
           final (sp, br, conf) = await _classifier!.classify(classifyCrop);
@@ -411,16 +405,18 @@ class AnimalDetectorCore {
         }
       }
 
-      animals.add(Animal(
-        boundingBox: bbox,
-        score: score,
-        species: species,
-        breed: breed,
-        speciesConfidence: speciesConfidence,
-        pose: pose,
-        imageWidth: imageWidth,
-        imageHeight: imageHeight,
-      ));
+      animals.add(
+        Animal(
+          boundingBox: bbox,
+          score: score,
+          species: species,
+          breed: breed,
+          speciesConfidence: speciesConfidence,
+          pose: pose,
+          imageWidth: imageWidth,
+          imageHeight: imageHeight,
+        ),
+      );
     }
 
     return animals;

@@ -121,15 +121,13 @@ class _InferenceMetric extends StatelessWidget {
   final String label;
   final num? microseconds;
 
-  const _InferenceMetric({
-    required this.label,
-    required this.microseconds,
-  });
+  const _InferenceMetric({required this.label, required this.microseconds});
 
   @override
   Widget build(BuildContext context) {
-    final value =
-        microseconds == null ? '—' : formatInferenceMilliseconds(microseconds!);
+    final value = microseconds == null
+        ? '—'
+        : formatInferenceMilliseconds(microseconds!);
     return Semantics(
       label: microseconds == null
           ? '$label inference time unavailable'
@@ -241,11 +239,11 @@ class _LiveCameraScreenState extends State<LiveCameraScreen> {
       _accelerometerSub = accelerometerEventStream().listen((event) {
         final next = event.x.abs() > event.y.abs()
             ? (event.x > 0
-                ? DeviceOrientation.landscapeLeft
-                : DeviceOrientation.landscapeRight)
+                  ? DeviceOrientation.landscapeLeft
+                  : DeviceOrientation.landscapeRight)
             : (event.y > 0
-                ? DeviceOrientation.portraitUp
-                : DeviceOrientation.portraitDown);
+                  ? DeviceOrientation.portraitUp
+                  : DeviceOrientation.portraitDown);
         if (next == DeviceOrientation.portraitDown &&
             (_deviceOrientation == DeviceOrientation.landscapeLeft ||
                 _deviceOrientation == DeviceOrientation.landscapeRight)) {
@@ -368,8 +366,9 @@ class _LiveCameraScreenState extends State<LiveCameraScreen> {
 
   Future<void> _switchCamera() async {
     if (_isSwitchingCamera || !_canSwitchCamera) return;
-    final target =
-        _isFrontCamera ? CameraLensDirection.back : CameraLensDirection.front;
+    final target = _isFrontCamera
+        ? CameraLensDirection.back
+        : CameraLensDirection.front;
     final next = _availableCameras.firstWhere(
       (value) => value.lensDirection == target,
     );
@@ -448,9 +447,9 @@ class _LiveCameraScreenState extends State<LiveCameraScreen> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -472,7 +471,8 @@ class _LiveCameraScreenState extends State<LiveCameraScreen> {
       );
     }
     final effective = _effectiveOrientation(context);
-    final portrait = effective == DeviceOrientation.portraitUp ||
+    final portrait =
+        effective == DeviceOrientation.portraitUp ||
         effective == DeviceOrientation.portraitDown;
     final aspect = portrait
         ? 1.0 / controller.value.aspectRatio
@@ -720,10 +720,7 @@ class _AnimalPainter extends CustomPainter {
         math.max(p1.dx, p2.dx),
         math.max(p1.dy, p2.dy),
       );
-      canvas.drawRect(
-        rect,
-        bodyPaint,
-      );
+      canvas.drawRect(rect, bodyPaint);
       final pose = animal.pose;
       if (pose != null) {
         for (final connection in animalPoseConnections) {
@@ -735,19 +732,11 @@ class _AnimalPainter extends CustomPainter {
               b.confidence < 0.3) {
             continue;
           }
-          canvas.drawLine(
-            t.map(a.x, a.y),
-            t.map(b.x, b.y),
-            posePaint,
-          );
+          canvas.drawLine(t.map(a.x, a.y), t.map(b.x, b.y), posePaint);
         }
         for (final landmark in pose.landmarks) {
           if (landmark.confidence >= 0.3) {
-            canvas.drawCircle(
-              t.map(landmark.x, landmark.y),
-              3,
-              posePaint,
-            );
+            canvas.drawCircle(t.map(landmark.x, landmark.y), 3, posePaint);
           }
         }
       }
@@ -770,10 +759,7 @@ class _AnimalPainter extends CustomPainter {
       textDirection: TextDirection.ltr,
     )..layout();
     final left = boundingBox.left;
-    final top = math.max(
-      0.0,
-      boundingBox.top - painter.height - 6,
-    );
+    final top = math.max(0.0, boundingBox.top - painter.height - 6);
     canvas.drawRect(
       Rect.fromLTWH(left, top, painter.width + 8, painter.height + 6),
       Paint()..color = _bodyColor,
@@ -904,12 +890,10 @@ class _VideoFileScreenState extends State<VideoFileScreen> {
     final docs = await getApplicationDocumentsDirectory();
     final output =
         '${docs.path}/animal_${DateTime.now().millisecondsSinceEpoch}.mp4';
-    final writer = cv.VideoWriter.fromFile(
-      output,
-      'avc1',
-      fps > 0 ? fps : 30,
-      (width, height),
-    );
+    final writer = cv.VideoWriter.fromFile(output, 'avc1', fps > 0 ? fps : 30, (
+      width,
+      height,
+    ));
     if (!writer.isOpened) {
       cap.release();
       setState(() {
@@ -1185,12 +1169,12 @@ class _VideoFileScreenState extends State<VideoFileScreen> {
               label: const Text('Pick Video'),
             )
           : (_isProcessing
-              ? FloatingActionButton.extended(
-                  onPressed: () => setState(() => _cancelRequested = true),
-                  icon: const Icon(Icons.cancel),
-                  label: const Text('Cancel'),
-                )
-              : null),
+                ? FloatingActionButton.extended(
+                    onPressed: () => setState(() => _cancelRequested = true),
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Cancel'),
+                  )
+                : null),
     );
   }
 
@@ -1334,21 +1318,21 @@ class _VideoFileScreenState extends State<VideoFileScreen> {
   }
 
   Widget _infoRow(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 70,
-              child: Text(
-                '$label:',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            Expanded(child: SelectableText(value)),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 70,
+          child: Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
-      );
+        Expanded(child: SelectableText(value)),
+      ],
+    ),
+  );
 
   String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');

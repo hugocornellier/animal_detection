@@ -8,9 +8,10 @@ import '../util/input_shape.dart';
 import '../types.dart';
 
 /// Callback type for downloading ensemble model weights.
-typedef EnsembleModelGetter = Future<(Uint8List, Uint8List)> Function({
-  void Function(String model, int received, int total)? onProgress,
-});
+typedef EnsembleModelGetter =
+    Future<(Uint8List, Uint8List)> Function({
+      void Function(String model, int received, int total)? onProgress,
+    });
 
 /// 3-model ensemble landmark runner with multi-scale + flip TTA.
 ///
@@ -123,12 +124,27 @@ class EnsembleLandmarkModelBase {
     _pool384 = InterpreterPool(poolSize: _poolSize);
 
     await Future.wait([
-      _initPool(_pool256!, bytes256, _size256, performanceConfig,
-          useIsolateInterpreter: useIsolateInterpreter),
-      _initPool(_pool320!, bytes320, _size320, performanceConfig,
-          useIsolateInterpreter: useIsolateInterpreter),
-      _initPool(_pool384!, bytes384, _size384, performanceConfig,
-          useIsolateInterpreter: useIsolateInterpreter),
+      _initPool(
+        _pool256!,
+        bytes256,
+        _size256,
+        performanceConfig,
+        useIsolateInterpreter: useIsolateInterpreter,
+      ),
+      _initPool(
+        _pool320!,
+        bytes320,
+        _size320,
+        performanceConfig,
+        useIsolateInterpreter: useIsolateInterpreter,
+      ),
+      _initPool(
+        _pool384!,
+        bytes384,
+        _size384,
+        performanceConfig,
+        useIsolateInterpreter: useIsolateInterpreter,
+      ),
     ]);
   }
 
@@ -142,8 +158,11 @@ class EnsembleLandmarkModelBase {
     await pool.initialize(
       (options, _) async {
         final interpreter = Interpreter.fromBuffer(bytes, options: options);
-        assertSquareInputSize(interpreter, inputSize,
-            'EnsembleLandmarkModelBase(${inputSize}px)');
+        assertSquareInputSize(
+          interpreter,
+          inputSize,
+          'EnsembleLandmarkModelBase(${inputSize}px)',
+        );
         interpreter.resizeInputTensor(0, [1, inputSize, inputSize, 3]);
         interpreter.allocateTensors();
         return interpreter;
@@ -216,9 +235,12 @@ class EnsembleLandmarkModelBase {
         if ((scale - 1.0).abs() >= 1e-6) tempMats.add(scaled);
 
         futures.add(
-          _runModelRaw(pool, scaled, size, outputLen).then(
-            (raw) => _unscaleCoords(raw, scale),
-          ),
+          _runModelRaw(
+            pool,
+            scaled,
+            size,
+            outputLen,
+          ).then((raw) => _unscaleCoords(raw, scale)),
         );
 
         final flipped = cv.flip(scaled, 1);
@@ -251,8 +273,10 @@ class EnsembleLandmarkModelBase {
         }
         final xNorm = (xSum / allPreds.length).clamp(0.0, 1.0);
         final yNorm = (ySum / allPreds.length).clamp(0.0, 1.0);
-        coords.add(
-            (xNorm * meta.cropW + meta.cx1, yNorm * meta.cropH + meta.cy1));
+        coords.add((
+          xNorm * meta.cropW + meta.cx1,
+          yNorm * meta.cropH + meta.cy1,
+        ));
       }
 
       return coords;
@@ -312,15 +336,12 @@ class EnsembleLandmarkModelBase {
       final CompiledModelPool cm = inputSize == _size256
           ? _cm256!
           : inputSize == _size320
-              ? _cm320!
-              : _cm384!;
+          ? _cm320!
+          : _cm384!;
       return cm.withModel((model, input) async {
         ImageUtils.matToFloat32Simd(crop, buffer: input);
         final Float32List raw = (await model.runAsync([input]))[0];
-        return List<double>.generate(
-          outputLen,
-          (i) => raw[i].clamp(0.0, 1.0),
-        );
+        return List<double>.generate(outputLen, (i) => raw[i].clamp(0.0, 1.0));
       });
     }
     return pool.withInterpreter((interpreter, isolateInterpreter) async {
@@ -340,10 +361,7 @@ class EnsembleLandmarkModelBase {
         interpreter.runForMultipleInputs([rgb.buffer], outputs);
       }
 
-      return List<double>.generate(
-        outputLen,
-        (i) => out[i].clamp(0.0, 1.0),
-      );
+      return List<double>.generate(outputLen, (i) => out[i].clamp(0.0, 1.0));
     });
   }
 

@@ -34,12 +34,13 @@ void main() {
     final dir = Directory('${Directory.current.path}/$kImageDir');
     expect(dir.existsSync(), isTrue, reason: 'missing $kImageDir');
 
-    final images = dir
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.jpg') || f.path.endsWith('.png'))
-        .toList()
-      ..sort((a, b) => a.path.compareTo(b.path));
+    final images =
+        dir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.jpg') || f.path.endsWith('.png'))
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
     expect(images, isNotEmpty, reason: 'no test images found');
 
     final detector = AnimalBodyDetector();
@@ -100,9 +101,11 @@ void main() {
       };
 
       // ignore: avoid_print
-      print('$name  dets=${dets.length}  '
-          'p50=${pct(0.50).toStringAsFixed(2)}ms  '
-          'min=${timings.first.toStringAsFixed(2)}ms');
+      print(
+        '$name  dets=${dets.length}  '
+        'p50=${pct(0.50).toStringAsFixed(2)}ms  '
+        'min=${timings.first.toStringAsFixed(2)}ms',
+      );
 
       mat.dispose();
     }
@@ -112,10 +115,9 @@ void main() {
     final out = File('${Directory.current.path}/$kOutPath');
     out.parent.createSync(recursive: true);
     out.writeAsStringSync(
-      const JsonEncoder.withIndent('  ').convert(<String, dynamic>{
-        'runsPerImage': kRuns,
-        'images': results,
-      }),
+      const JsonEncoder.withIndent(
+        '  ',
+      ).convert(<String, dynamic>{'runsPerImage': kRuns, 'images': results}),
     );
     // ignore: avoid_print
     print('\nwrote ${out.path}');

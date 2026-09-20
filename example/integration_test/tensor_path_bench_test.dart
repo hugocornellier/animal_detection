@@ -54,7 +54,8 @@ void main() {
 
   testWidgets('input tensor path: current vs candidates', (tester) async {
     debugPrint(
-        'TBENCH iters=$_iters warmup=$_warmup (interleaved, median [p25-p75])');
+      'TBENCH iters=$_iters warmup=$_warmup (interleaved, median [p25-p75])',
+    );
 
     for (final entry in _sizes.entries) {
       final size = entry.key;
@@ -134,33 +135,44 @@ void main() {
       final b = _stats(flatReuse);
       final c = _stats(simd);
       debugPrint('TBENCH ${size}px ($label)');
-      debugPrint('TBENCH   A current (loop + fresh boxed tensor) '
-          '${a.median.toStringAsFixed(3)} ms [${a.p25.toStringAsFixed(3)}-'
-          '${a.p75.toStringAsFixed(3)}]');
-      debugPrint('TBENCH   B loop + reused boxed tensor          '
-          '${b.median.toStringAsFixed(3)} ms [${b.p25.toStringAsFixed(3)}-'
-          '${b.p75.toStringAsFixed(3)}]  '
-          'saves ${(a.median - b.median).toStringAsFixed(3)} ms');
-      debugPrint('TBENCH   C SIMD -> reused flat Float32List     '
-          '${c.median.toStringAsFixed(3)} ms [${c.p25.toStringAsFixed(3)}-'
-          '${c.p75.toStringAsFixed(3)}]  '
-          'saves ${(a.median - c.median).toStringAsFixed(3)} ms '
-          '(${(a.median / c.median).toStringAsFixed(1)}x)');
+      debugPrint(
+        'TBENCH   A current (loop + fresh boxed tensor) '
+        '${a.median.toStringAsFixed(3)} ms [${a.p25.toStringAsFixed(3)}-'
+        '${a.p75.toStringAsFixed(3)}]',
+      );
+      debugPrint(
+        'TBENCH   B loop + reused boxed tensor          '
+        '${b.median.toStringAsFixed(3)} ms [${b.p25.toStringAsFixed(3)}-'
+        '${b.p75.toStringAsFixed(3)}]  '
+        'saves ${(a.median - b.median).toStringAsFixed(3)} ms',
+      );
+      debugPrint(
+        'TBENCH   C SIMD -> reused flat Float32List     '
+        '${c.median.toStringAsFixed(3)} ms [${c.p25.toStringAsFixed(3)}-'
+        '${c.p75.toStringAsFixed(3)}]  '
+        'saves ${(a.median - c.median).toStringAsFixed(3)} ms '
+        '(${(a.median / c.median).toStringAsFixed(1)}x)',
+      );
       final d = _stats(zeroCopy);
       final e = _stats(simdNoCvt);
-      debugPrint('TBENCH   D SIMD, no copy (view Mat buffer)    '
-          '${d.median.toStringAsFixed(3)} ms [${d.p25.toStringAsFixed(3)}-'
-          '${d.p75.toStringAsFixed(3)}]  '
-          'vs C ${(c.median - d.median).toStringAsFixed(3)} ms');
-      debugPrint('TBENCH   E convertTo only (no BGR->RGB pass)  '
-          '${e.median.toStringAsFixed(3)} ms [${e.p25.toStringAsFixed(3)}-'
-          '${e.p75.toStringAsFixed(3)}]  '
-          'cvtColor costs ${(c.median - e.median).toStringAsFixed(3)} ms');
+      debugPrint(
+        'TBENCH   D SIMD, no copy (view Mat buffer)    '
+        '${d.median.toStringAsFixed(3)} ms [${d.p25.toStringAsFixed(3)}-'
+        '${d.p75.toStringAsFixed(3)}]  '
+        'vs C ${(c.median - d.median).toStringAsFixed(3)} ms',
+      );
+      debugPrint(
+        'TBENCH   E convertTo only (no BGR->RGB pass)  '
+        '${e.median.toStringAsFixed(3)} ms [${e.p25.toStringAsFixed(3)}-'
+        '${e.p75.toStringAsFixed(3)}]  '
+        'cvtColor costs ${(c.median - e.median).toStringAsFixed(3)} ms',
+      );
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 
-  testWidgets('ImageUtils SIMD helpers match their per-pixel equivalents',
-      (tester) async {
+  testWidgets('ImageUtils SIMD helpers match their per-pixel equivalents', (
+    tester,
+  ) async {
     // Guards the two helpers actually used by the model classes. The ImageNet
     // variant does a per-channel affine via scalar Mat ops, so it needs
     // proving independently of the plain /255 path.
@@ -192,17 +204,24 @@ void main() {
       ImageUtils.matToFloat32ImageNet(mat),
     );
     debugPrint(
-        'TBENCH helper parity: plain=$plainWorst imagenet=$imagenetWorst');
+      'TBENCH helper parity: plain=$plainWorst imagenet=$imagenetWorst',
+    );
     expect(plainWorst, lessThan(1e-6), reason: 'matToFloat32Simd mismatch');
-    expect(imagenetWorst, lessThan(1e-5),
-        reason: 'matToFloat32ImageNetSimd mismatch');
+    expect(
+      imagenetWorst,
+      lessThan(1e-5),
+      reason: 'matToFloat32ImageNetSimd mismatch',
+    );
 
     // Buffer reuse must produce identical output to a fresh allocation, and
     // must actually reuse the instance handed in.
     final reusable = Float32List(size * size * 3);
     final returned = ImageUtils.matToFloat32Simd(mat, buffer: reusable);
-    expect(identical(returned, reusable), isTrue,
-        reason: 'supplied buffer of the right length should be reused');
+    expect(
+      identical(returned, reusable),
+      isTrue,
+      reason: 'supplied buffer of the right length should be reused',
+    );
     expect(worstOf(returned, ImageUtils.matToFloat32(mat)), lessThan(1e-6));
 
     // A wrong-length buffer must be rejected rather than corrupted.
@@ -212,8 +231,9 @@ void main() {
     expect(grown.length, size * size * 3);
   });
 
-  testWidgets('SIMD path produces the same values as the per-pixel loop',
-      (tester) async {
+  testWidgets('SIMD path produces the same values as the per-pixel loop', (
+    tester,
+  ) async {
     // A speed change must not move the numbers. Same convention as the
     // animal_detection 1.4.0 anchor-table change, which documented
     // bit-identical scores.
@@ -244,7 +264,10 @@ void main() {
       if (d > worst) worst = d;
     }
     debugPrint('TBENCH worst |SIMD - loop| over $n floats = $worst');
-    expect(worst, lessThan(1e-6),
-        reason: 'SIMD conversion must match the per-pixel loop');
+    expect(
+      worst,
+      lessThan(1e-6),
+      reason: 'SIMD conversion must match the per-pixel loop',
+    );
   });
 }

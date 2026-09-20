@@ -24,8 +24,9 @@ const _landmarks = 48;
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('CompiledModel path agrees with Interpreter and is benchmarked',
-      (tester) async {
+  testWidgets('CompiledModel path agrees with Interpreter and is benchmarked', (
+    tester,
+  ) async {
     final file = File(_catLandmarkModel);
     if (!file.existsSync()) {
       debugPrint('CM skipped: $_catLandmarkModel not found');
@@ -50,8 +51,11 @@ void main() {
       numLandmarks: _landmarks,
       modelPath: 'unused',
     );
-    await interp.initializeFromBuffer(bytes, const PerformanceConfig(),
-        useIsolateInterpreter: false);
+    await interp.initializeFromBuffer(
+      bytes,
+      const PerformanceConfig(),
+      useIsolateInterpreter: false,
+    );
     final a = await interp.predictRaw(mat, meta);
 
     // --- compiled path ---
@@ -84,8 +88,10 @@ void main() {
       if (dx > worst) worst = dx;
       if (dy > worst) worst = dy;
     }
-    debugPrint('CM worst |interpreter - compiled| over '
-        '${a.length * 2} coords = $worst');
+    debugPrint(
+      'CM worst |interpreter - compiled| over '
+      '${a.length * 2} coords = $worst',
+    );
 
     // --- benchmark both ---
     Future<double> bench(Future<void> Function() run) async {
@@ -103,9 +109,11 @@ void main() {
 
     final msI = await bench(() => interp.predictRaw(mat, meta));
     final msC = await bench(() => compiled.predictRaw(mat, meta));
-    debugPrint('CM interpreter=${msI.toStringAsFixed(1)}ms  '
-        'compiled=${msC.toStringAsFixed(1)}ms  '
-        'ratio=${(msI / msC).toStringAsFixed(2)}x');
+    debugPrint(
+      'CM interpreter=${msI.toStringAsFixed(1)}ms  '
+      'compiled=${msC.toStringAsFixed(1)}ms  '
+      'ratio=${(msI / msC).toStringAsFixed(2)}x',
+    );
 
     interp.dispose();
     compiled.dispose();
@@ -116,7 +124,10 @@ void main() {
     // cropW/cropH are 1 in this test, so coordinates are in normalized [0,1]
     // space. 0.02 is 2% of the crop, generous for kernel differences between
     // backends but far tighter than the 0.57 first observed.
-    expect(worst, lessThan(0.02),
-        reason: 'compiled output diverges from interpreter output');
+    expect(
+      worst,
+      lessThan(0.02),
+      reason: 'compiled output diverges from interpreter output',
+    );
   }, timeout: const Timeout(Duration(minutes: 10)));
 }

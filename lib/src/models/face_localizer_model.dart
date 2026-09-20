@@ -27,10 +27,8 @@ class FaceLocalizerModel extends SingleInterpreterModel {
   late Float32List _outputBuffer;
 
   /// Creates a face localizer with the given [inputSize] and [modelPath].
-  FaceLocalizerModel({
-    required this.inputSize,
-    required String modelPath,
-  }) : _modelPath = modelPath;
+  FaceLocalizerModel({required this.inputSize, required String modelPath})
+    : _modelPath = modelPath;
 
   /// Initializes the model from Flutter assets.
   Future<void> initialize(

@@ -20,10 +20,7 @@ class AnimalDetectionApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Animal Detection Demo',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.brown,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(colorSchemeSeed: Colors.brown, useMaterial3: true),
       home: const AnimalDetectionHome(),
     );
   }
@@ -35,9 +32,7 @@ class AnimalDetectionHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Animal Detection Demo'),
-      ),
+      appBar: AppBar(title: const Text('Animal Detection Demo')),
       body: _ScrollableCentered(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
@@ -103,11 +98,7 @@ class AnimalDetectionHome extends StatelessWidget {
     );
   }
 
-  Widget _buildSection(
-    BuildContext context,
-    String title,
-    List<Widget> cards,
-  ) {
+  Widget _buildSection(BuildContext context, String title, List<Widget> cards) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,9 +108,9 @@ class AnimalDetectionHome extends StatelessWidget {
           child: Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                ),
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -171,9 +162,9 @@ class AnimalDetectionHome extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   description,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -270,8 +261,9 @@ class _StillImageScreenState extends State<StillImageScreen> {
         onDownloadProgress: (model, received, total) {
           if (!mounted) return;
           final mb = (received / 1024 / 1024).toStringAsFixed(1);
-          final totalMb =
-              total > 0 ? (total / 1024 / 1024).toStringAsFixed(1) : '?';
+          final totalMb = total > 0
+              ? (total / 1024 / 1024).toStringAsFixed(1)
+              : '?';
           setState(() {
             _downloadStatus = 'Downloading HRNet: $mb / $totalMb MB';
           });
@@ -458,10 +450,9 @@ class _StillImageScreenState extends State<StillImageScreen> {
               Text(
                 'This is a one-time download. The model will be cached for future use.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -574,9 +565,9 @@ class _StillImageScreenState extends State<StillImageScreen> {
                       Text(
                         'Detected: ${_results.length} animal${_results.length > 1 ? 's' : ''}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       for (final animal in _results) ...[
@@ -625,8 +616,8 @@ class _StillImageScreenState extends State<StillImageScreen> {
         ElevatedButton.icon(
           onPressed: _isInitialized && !_isProcessing
               ? () => _isDesktop
-                  ? _pickFileFromSystem()
-                  : _pickImage(ImageSource.gallery)
+                    ? _pickFileFromSystem()
+                    : _pickImage(ImageSource.gallery)
               : null,
           icon: const Icon(Icons.photo_library),
           label: Text(_isDesktop ? 'Open File' : 'Gallery'),
@@ -698,14 +689,16 @@ class _StillImageScreenState extends State<StillImageScreen> {
                   children: [
                     RadioListTile<AnimalPoseModel>(
                       title: const Text('RTMPose-S'),
-                      subtitle:
-                          const Text('11.6 MB, bundled. Fast SimCC decoder.'),
+                      subtitle: const Text(
+                        '11.6 MB, bundled. Fast SimCC decoder.',
+                      ),
                       value: AnimalPoseModel.rtmpose,
                     ),
                     RadioListTile<AnimalPoseModel>(
                       title: const Text('HRNet-w32'),
                       subtitle: const Text(
-                          '54.6 MB, downloaded on demand. Most accurate.'),
+                        '54.6 MB, downloaded on demand. Most accurate.',
+                      ),
                       value: AnimalPoseModel.hrnet,
                     ),
                   ],
@@ -741,15 +734,16 @@ class _StillImageScreenState extends State<StillImageScreen> {
             for (final animal in _results) ...[
               Text(
                 '${animal.species ?? "Animal"} (score: ${(animal.score * 100).toStringAsFixed(1)}%)',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               if (animal.breed != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4, bottom: 4),
                   child: Text(
-                      'Breed: ${animal.breed} (${(animal.speciesConfidence! * 100).toStringAsFixed(0)}%)'),
+                    'Breed: ${animal.breed} (${(animal.speciesConfidence! * 100).toStringAsFixed(0)}%)',
+                  ),
                 ),
               if (animal.pose != null && animal.pose!.hasLandmarks) ...[
                 const SizedBox(height: 8),
@@ -757,28 +751,32 @@ class _StillImageScreenState extends State<StillImageScreen> {
                   'Body Pose (${animal.pose!.landmarks.length} keypoints)',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
-                ...animal.pose!.landmarks.map((lm) => Card(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      child: ListTile(
-                        dense: true,
-                        leading: CircleAvatar(
-                          radius: 14,
-                          backgroundColor: Colors.orange,
-                          child: Text(
-                            lm.type.index.toString(),
-                            style: const TextStyle(
-                                fontSize: 9, color: Colors.white),
+                ...animal.pose!.landmarks.map(
+                  (lm) => Card(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    child: ListTile(
+                      dense: true,
+                      leading: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.orange,
+                        child: Text(
+                          lm.type.index.toString(),
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Colors.white,
                           ),
                         ),
-                        title: Text(
-                          lm.type.name,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        subtitle: Text(
-                          'Position: (${lm.x.toStringAsFixed(1)}, ${lm.y.toStringAsFixed(1)})  conf: ${(lm.confidence * 100).toStringAsFixed(0)}%',
-                        ),
                       ),
-                    )),
+                      title: Text(
+                        lm.type.name,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        'Position: (${lm.x.toStringAsFixed(1)}, ${lm.y.toStringAsFixed(1)})  conf: ${(lm.confidence * 100).toStringAsFixed(0)}%',
+                      ),
+                    ),
+                  ),
+                ),
               ],
               if (animal != _results.last) const Divider(height: 24),
             ],
@@ -805,22 +803,24 @@ class AnimalVisualizerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      return Stack(
-        children: [
-          Image.memory(imageBytes, fit: BoxFit.contain),
-          Positioned.fill(
-            child: CustomPaint(
-              painter: AnimalOverlayPainter(
-                results: results,
-                imageWidth: imageWidth,
-                imageHeight: imageHeight,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          children: [
+            Image.memory(imageBytes, fit: BoxFit.contain),
+            Positioned.fill(
+              child: CustomPaint(
+                painter: AnimalOverlayPainter(
+                  results: results,
+                  imageWidth: imageWidth,
+                  imageHeight: imageHeight,
+                ),
               ),
             ),
-          ),
-        ],
-      );
-    });
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -865,8 +865,14 @@ class AnimalOverlayPainter extends CustomPainter {
     }
   }
 
-  void _drawBoundingBox(Canvas canvas, Animal animal, double scaleX,
-      double scaleY, double offsetX, double offsetY) {
+  void _drawBoundingBox(
+    Canvas canvas,
+    Animal animal,
+    double scaleX,
+    double scaleY,
+    double offsetX,
+    double offsetY,
+  ) {
     final Paint strokePaint = Paint()
       ..color = Colors.orange.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
@@ -885,15 +891,21 @@ class AnimalOverlayPainter extends CustomPainter {
     canvas.drawRect(rect, strokePaint);
   }
 
-  void _drawSpeciesLabel(Canvas canvas, Animal animal, double scaleX,
-      double scaleY, double offsetX, double offsetY) {
+  void _drawSpeciesLabel(
+    Canvas canvas,
+    Animal animal,
+    double scaleX,
+    double scaleY,
+    double offsetX,
+    double offsetY,
+  ) {
     if (animal.species == null) return;
 
     final double x1 = animal.boundingBox.left * scaleX + offsetX;
     final double y1 = animal.boundingBox.top * scaleY + offsetY;
 
-    final String breedInfo = animal.breed != null &&
-            animal.speciesConfidence != null
+    final String breedInfo =
+        animal.breed != null && animal.speciesConfidence != null
         ? ' (${animal.breed}, ${(animal.speciesConfidence! * 100).toStringAsFixed(0)}%)'
         : '';
     final String label = '${animal.species}$breedInfo';
@@ -926,8 +938,14 @@ class AnimalOverlayPainter extends CustomPainter {
     textPainter.paint(canvas, Offset(x1 + padding, labelY + padding));
   }
 
-  void _drawBodySkeleton(Canvas canvas, Animal animal, double scaleX,
-      double scaleY, double offsetX, double offsetY) {
+  void _drawBodySkeleton(
+    Canvas canvas,
+    Animal animal,
+    double scaleX,
+    double scaleY,
+    double offsetX,
+    double offsetY,
+  ) {
     final Paint posePaint = Paint()
       ..color = Colors.red.withValues(alpha: 0.8)
       ..strokeWidth = 2.5
@@ -946,11 +964,19 @@ class AnimalOverlayPainter extends CustomPainter {
     }
   }
 
-  void _drawBodyKeypoints(Canvas canvas, Animal animal, double scaleX,
-      double scaleY, double offsetX, double offsetY) {
+  void _drawBodyKeypoints(
+    Canvas canvas,
+    Animal animal,
+    double scaleX,
+    double scaleY,
+    double offsetX,
+    double offsetY,
+  ) {
     for (final lm in animal.pose!.landmarks) {
-      final Offset center =
-          Offset(lm.x * scaleX + offsetX, lm.y * scaleY + offsetY);
+      final Offset center = Offset(
+        lm.x * scaleX + offsetX,
+        lm.y * scaleY + offsetY,
+      );
       canvas.drawCircle(center, 5, Paint()..color = Colors.red);
       canvas.drawCircle(center, 2, Paint()..color = Colors.white);
     }

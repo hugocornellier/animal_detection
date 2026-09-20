@@ -39,8 +39,11 @@ Future<List<Animal>> _run({
     final data = await rootBundle.load(_image);
     final mat = cv.imdecode(data.buffer.asUint8List(), cv.IMREAD_COLOR);
     try {
-      return await detector.detectFromMat(mat,
-          imageWidth: mat.cols, imageHeight: mat.rows);
+      return await detector.detectFromMat(
+        mat,
+        imageWidth: mat.cols,
+        imageHeight: mat.rows,
+      );
     } finally {
       mat.dispose();
     }
@@ -50,17 +53,13 @@ Future<List<Animal>> _run({
 }
 
 double _boxDelta(BoundingBox a, BoundingBox b) => <double>[
-      (a.left - b.left).abs(),
-      (a.top - b.top).abs(),
-      (a.right - b.right).abs(),
-      (a.bottom - b.bottom).abs(),
-    ].reduce((x, y) => x > y ? x : y);
+  (a.left - b.left).abs(),
+  (a.top - b.top).abs(),
+  (a.right - b.right).abs(),
+  (a.bottom - b.bottom).abs(),
+].reduce((x, y) => x > y ? x : y);
 
-void _expectParity(
-  List<Animal> expected,
-  List<Animal> actual,
-  String label,
-) {
+void _expectParity(List<Animal> expected, List<Animal> actual, String label) {
   expect(actual.length, expected.length, reason: '$label animal count');
   for (var i = 0; i < expected.length; i++) {
     final a = expected[i];

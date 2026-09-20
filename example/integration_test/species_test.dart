@@ -47,16 +47,21 @@ void main() {
       print('  Detections: ${results.length}');
       for (int i = 0; i < results.length; i++) {
         final a = results[i];
-        print('  [$i] species=${a.species}, breed=${a.breed}, '
-            'score=${(a.score * 100).toStringAsFixed(1)}%, '
-            'conf=${a.speciesConfidence != null ? (a.speciesConfidence! * 100).toStringAsFixed(1) : "n/a"}%, '
-            'pose=${a.pose != null ? "${a.pose!.landmarks.length} kps" : "none"}, '
-            'bbox=(${a.boundingBox.left.toInt()},${a.boundingBox.top.toInt()})-(${a.boundingBox.right.toInt()},${a.boundingBox.bottom.toInt()})');
+        print(
+          '  [$i] species=${a.species}, breed=${a.breed}, '
+          'score=${(a.score * 100).toStringAsFixed(1)}%, '
+          'conf=${a.speciesConfidence != null ? (a.speciesConfidence! * 100).toStringAsFixed(1) : "n/a"}%, '
+          'pose=${a.pose != null ? "${a.pose!.landmarks.length} kps" : "none"}, '
+          'bbox=(${a.boundingBox.left.toInt()},${a.boundingBox.top.toInt()})-(${a.boundingBox.right.toInt()},${a.boundingBox.bottom.toInt()})',
+        );
       }
       print('');
 
-      expect(results, isNotEmpty,
-          reason: 'Expected at least one detection for $species');
+      expect(
+        results,
+        isNotEmpty,
+        reason: 'Expected at least one detection for $species',
+      );
     });
   }
 }

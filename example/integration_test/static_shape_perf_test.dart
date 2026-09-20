@@ -17,7 +17,8 @@ import 'package:flutter_litert/native.dart';
 const _shipped =
     '/Users/hugocornellier/IdeaProjects/cat_detection/assets/models/'
     'cat_face_landmarks_full.tflite';
-const _static = '/private/tmp/claude-501/'
+const _static =
+    '/private/tmp/claude-501/'
     '-Users-hugocornellier-IdeaProjects-cat-detection-example/'
     '4c9115c2-76bf-490c-a607-ad32b6bb5b64/scratchpad/static/'
     'cat_static_384_float16.tflite';
@@ -57,8 +58,9 @@ List<double> _bench(String path, PerformanceConfig cfg, Float32List input) {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('static re-export vs shipped, interpreter invoke',
-      (tester) async {
+  testWidgets('static re-export vs shipped, interpreter invoke', (
+    tester,
+  ) async {
     for (final f in [_shipped, _static]) {
       if (!File(f).existsSync()) {
         debugPrint('SSP FILE MISSING: $f');
@@ -84,12 +86,16 @@ void main() {
       final sa = _stats(a);
       final sb = _stats(b);
       debugPrint('SSP ${cfg.key}');
-      debugPrint('SSP   shipped (dynamic) ${sa.median.toStringAsFixed(2)} ms '
-          '[${sa.p25.toStringAsFixed(2)}-${sa.p75.toStringAsFixed(2)}]');
-      debugPrint('SSP   static  (fixed)   ${sb.median.toStringAsFixed(2)} ms '
-          '[${sb.p25.toStringAsFixed(2)}-${sb.p75.toStringAsFixed(2)}]  '
-          'delta ${(sb.median - sa.median).toStringAsFixed(2)} ms '
-          '(${(sa.median / sb.median).toStringAsFixed(2)}x)');
+      debugPrint(
+        'SSP   shipped (dynamic) ${sa.median.toStringAsFixed(2)} ms '
+        '[${sa.p25.toStringAsFixed(2)}-${sa.p75.toStringAsFixed(2)}]',
+      );
+      debugPrint(
+        'SSP   static  (fixed)   ${sb.median.toStringAsFixed(2)} ms '
+        '[${sb.p25.toStringAsFixed(2)}-${sb.p75.toStringAsFixed(2)}]  '
+        'delta ${(sb.median - sa.median).toStringAsFixed(2)} ms '
+        '(${(sa.median / sb.median).toStringAsFixed(2)}x)',
+      );
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 }

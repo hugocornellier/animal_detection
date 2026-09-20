@@ -11,11 +11,7 @@ class ImageUtils {
     Uint8List bytes,
     cv.MatType type,
   ) {
-    final mat = cv.Mat.create(
-      rows: layout.rows,
-      cols: layout.cols,
-      type: type,
-    );
+    final mat = cv.Mat.create(rows: layout.rows, cols: layout.cols, type: type);
     try {
       layout.copyTo(mat.data, bytes);
       return mat;
@@ -42,21 +38,20 @@ class ImageUtils {
         return mat;
       }
       final scale = maxDim / (mat.cols > mat.rows ? mat.cols : mat.rows);
-      final resized = cv.resize(
-        mat,
-        ((mat.cols * scale).toInt(), (mat.rows * scale).toInt()),
-        interpolation: cv.INTER_LINEAR,
-      );
+      final resized = cv.resize(mat, (
+        (mat.cols * scale).toInt(),
+        (mat.rows * scale).toInt(),
+      ), interpolation: cv.INTER_LINEAR);
       mat.dispose();
       return resized;
     }
 
     int? rotateFlag() => switch (plan.rotation) {
-          CameraFrameRotation.cw90 => cv.ROTATE_90_CLOCKWISE,
-          CameraFrameRotation.cw180 => cv.ROTATE_180,
-          CameraFrameRotation.cw270 => cv.ROTATE_90_COUNTERCLOCKWISE,
-          null => null,
-        };
+      CameraFrameRotation.cw90 => cv.ROTATE_90_CLOCKWISE,
+      CameraFrameRotation.cw180 => cv.ROTATE_180,
+      CameraFrameRotation.cw270 => cv.ROTATE_90_COUNTERCLOCKWISE,
+      null => null,
+    };
 
     cv.Mat maybeRotate(cv.Mat mat) {
       final flag = rotateFlag();
@@ -84,13 +79,13 @@ class ImageUtils {
 
         if (maxDim != null &&
             (current.cols > maxDim || current.rows > maxDim)) {
-          final scale = maxDim /
+          final scale =
+              maxDim /
               (current.cols > current.rows ? current.cols : current.rows);
-          final resized = cv.resize(
-            current,
-            ((current.cols * scale).toInt(), (current.rows * scale).toInt()),
-            interpolation: cv.INTER_LINEAR,
-          );
+          final resized = cv.resize(current, (
+            (current.cols * scale).toInt(),
+            (current.rows * scale).toInt(),
+          ), interpolation: cv.INTER_LINEAR);
           if (!identical(current, source)) current.dispose();
           current = resized;
         }

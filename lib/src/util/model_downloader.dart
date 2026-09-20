@@ -22,8 +22,7 @@ class ModelDownloader {
   /// Downloads the HRNet model if not cached, returning the raw bytes.
   static Future<Uint8List> getHrnetModel({
     void Function(int received, int total)? onProgress,
-  }) =>
-      _downloader.getModel(_hrnetFileName, onProgress: onProgress);
+  }) => _downloader.getModel(_hrnetFileName, onProgress: onProgress);
 
   /// Returns true if the HRNet model is already cached locally.
   static Future<bool> isHrnetCached() =>

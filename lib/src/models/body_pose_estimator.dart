@@ -138,12 +138,14 @@ class BodyPoseEstimator extends SingleInterpreterModel {
       final double yOrig = (kp.y - padTop) / scale + cropY;
       final landmarkType =
           AnimalPoseLandmarkType.values[i - _bodyKeypointStart];
-      landmarks.add(AnimalPoseLandmark(
-        type: landmarkType,
-        x: xOrig,
-        y: yOrig,
-        confidence: kp.confidence,
-      ));
+      landmarks.add(
+        AnimalPoseLandmark(
+          type: landmarkType,
+          x: xOrig,
+          y: yOrig,
+          confidence: kp.confidence,
+        ),
+      );
     }
 
     return AnimalPose(landmarks: landmarks);
@@ -170,10 +172,16 @@ class BodyPoseEstimator extends SingleInterpreterModel {
     final result = <({double x, double y, double confidence})>[];
     for (int kp = 0; kp < _numKeypoints; kp++) {
       final int rowStart = kp * _simccBins;
-      final xRow =
-          Float32List.sublistView(simccX, rowStart, rowStart + _simccBins);
-      final yRow =
-          Float32List.sublistView(simccY, rowStart, rowStart + _simccBins);
+      final xRow = Float32List.sublistView(
+        simccX,
+        rowStart,
+        rowStart + _simccBins,
+      );
+      final yRow = Float32List.sublistView(
+        simccY,
+        rowStart,
+        rowStart + _simccBins,
+      );
 
       // argmax
       int xArgmax = 0;

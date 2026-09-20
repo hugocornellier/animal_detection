@@ -7,8 +7,9 @@ import 'package:opencv_dart/opencv_dart.dart' as cv;
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('packed camera frame matches direct Mat detection',
-      (tester) async {
+  testWidgets('packed camera frame matches direct Mat detection', (
+    tester,
+  ) async {
     final detector = await AnimalDetector.create(
       performanceConfig: const PerformanceConfig.xnnpack(),
     );
