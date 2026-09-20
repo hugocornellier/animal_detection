@@ -9,7 +9,7 @@ import 'single_interpreter_model.dart';
 /// Generic face bounding box regression model using letterbox preprocessing.
 ///
 /// Runs an EfficientNet-based regression model that takes a letterbox-resized
-/// image and outputs a single [x1,y1,x2,y2] bounding box normalized to [0,1].
+/// image and outputs a single `[x1,y1,x2,y2]` bounding box normalized to `[0,1]`.
 ///
 /// Used by both cat and dog face detection pipelines. The only difference
 /// between species is the model weights (passed via asset path or buffer).

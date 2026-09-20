@@ -12,7 +12,7 @@ class ModelDownloader {
   );
 
   /// File name of the HRNet pose model, as published in the release named by
-  /// [releaseBaseUrl]. Must match the asset name exactly; a mismatch surfaces
+  /// `releaseBaseUrl`. Must match the asset name exactly; a mismatch surfaces
   /// only as an HTTP 404 at first use, which is how the previous value
   /// ('..._w32_256_float16.tflite') went unnoticed.
   static const String modelHrnet = 'superanimal_hrnet_w32_float16.tflite';

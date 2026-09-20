@@ -17,7 +17,7 @@ typedef EnsembleModelGetter =
 ///
 /// Runs 3 models (256px + 320px + 384px) x 3 scales (0.9, 1.0, 1.1) x
 /// 2 orientations (original + horizontal flip) = 18 inference passes,
-/// averaged in normalized [0,1] space for robust landmark prediction.
+/// averaged in normalized `[0,1]` space for robust landmark prediction.
 ///
 /// Species-specific parameters (landmark count, flip index, model paths,
 /// download function) are passed at construction time.

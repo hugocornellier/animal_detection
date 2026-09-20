@@ -183,7 +183,7 @@ class ImageUtils {
     );
   }
 
-  /// Convert BGR Mat to RGB Float32List normalized to [0, 1].
+  /// Convert BGR Mat to RGB Float32List normalized to `[0, 1]`.
   static Float32List matToFloat32(cv.Mat mat) {
     return bgrBytesToRgbFloat32(
       bytes: mat.data,
@@ -191,7 +191,7 @@ class ImageUtils {
     );
   }
 
-  /// Convert BGR Mat to RGB Float32List normalized to [0, 1] via OpenCV's
+  /// Convert BGR Mat to RGB Float32List normalized to `[0, 1]` via OpenCV's
   /// SIMD path, writing into [buffer] when one is supplied.
   ///
   /// Numerically equivalent to [matToFloat32] (verified to within one float32
@@ -267,7 +267,7 @@ class ImageUtils {
   /// Convert BGR Mat to RGB Float32List with ImageNet normalization.
   ///
   /// Each channel is normalized: (pixel/255 - mean) / std
-  /// where mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225].
+  /// where mean=`[0.485, 0.456, 0.406]` and std=`[0.229, 0.224, 0.225]`.
   static Float32List matToFloat32ImageNet(cv.Mat mat) {
     final int totalPixels = mat.rows * mat.cols;
     final Uint8List bytes = mat.data;
