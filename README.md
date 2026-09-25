@@ -304,10 +304,13 @@ downscaling, and inference stay in the detector worker isolate.
 final animals = await detector.detectFromCameraImage(
   cameraImage,
   rotation: rotation,
-  isBgra: Platform.isMacOS,
   maxDim: 640,
 );
 ```
+
+On desktop, the frame's byte order (BGRA or RGBA) is read from
+`CameraImage.format.raw`, so the same call works with camera_desktop 1.x and
+2.x. Pass `isBgra` only to override it.
 
 For lower-level integrations, use `prepareCameraFrame(...)` followed by
 `detectFromCameraFrame(...)`.

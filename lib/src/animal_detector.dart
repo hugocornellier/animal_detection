@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter/services.dart';
@@ -290,6 +289,14 @@ class AnimalDetector {
 
   /// Convenience wrapper accepting a package:camera `CameraImage`-shaped
   /// object without taking a hard dependency on package:camera.
+  ///
+  /// [isBgra] selects BGRA vs. RGBA for the desktop single-plane path; ignored
+  /// for YUV input (Android/iOS). When omitted, the byte order is read from the
+  /// frame's `format.raw`: `'BGRA'` (camera_desktop 2.x on every desktop
+  /// platform) selects BGRA and `'RGBA'` (camera_desktop 1.x on Linux and
+  /// Windows) selects RGBA. Any other value falls back to BGRA on macOS and
+  /// RGBA elsewhere. Only pass this explicitly if you are using a non-standard
+  /// camera plugin that delivers a different format.
   Future<List<Animal>> detectFromCameraImage(
     Object cameraImage, {
     CameraFrameRotation? rotation,
@@ -300,7 +307,7 @@ class AnimalDetector {
     final frame = prepareCameraFrameFromImage(
       cameraImage,
       rotation: rotation,
-      isBgra: isBgra ?? Platform.isMacOS,
+      isBgra: isBgra,
     );
     if (frame == null) return const <Animal>[];
     return detectFromCameraFrame(frame, maxDim: maxDim);

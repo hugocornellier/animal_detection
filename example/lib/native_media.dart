@@ -428,7 +428,6 @@ class _LiveCameraScreenState extends State<LiveCameraScreen> {
         final animals = await detector.detectFromCameraImage(
           image,
           rotation: rotation,
-          isBgra: Platform.isMacOS,
           maxDim: _cameraMaxDimension,
         );
         stopwatch.stop();
