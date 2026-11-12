@@ -1,3 +1,5 @@
+// material.dart is deprecated from Flutter 3.50 (package:material_ui replaces it).
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:animal_detection_example/native_media.dart';
