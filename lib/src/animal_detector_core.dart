@@ -72,8 +72,9 @@ class AnimalDetectorCore {
   /// is slower there and its output deviates by 2.6e-01, which is corruption
   /// rather than fp16 rounding.
   ///
-  /// Only macOS has been measured. iOS resolves Metal from a different binary and
-  /// Android uses an entirely different GPU delegate, so verify on device before
+  /// Only macOS has been measured. iOS resolves Metal from a different binary,
+  /// and Android has had no Interpreter GPU delegate since flutter_litert 4.0.0
+  /// ([PerformanceConfig.gpu] runs XNNPACK there), so verify on device before
   /// setting this in production.
   final PerformanceConfig? posePerformanceConfig;
 

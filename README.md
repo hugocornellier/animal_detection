@@ -125,6 +125,8 @@ Animals detected but not matching a known species are labeled `"unknown_animal"`
 
 - Dart 3.10+ and Flutter 3.47.5+ (`dartcv4 2.3.1` needs `meta 1.19.0`, which
   older `flutter_test` pins rule out).
+- Android `minSdk` 24 and iOS 15.0 or newer, which `flutter_litert` 4.x needs.
+  Both are Flutter's defaults for new apps.
 - iOS builds on Xcode 27 need an iOS 15 deployment target. Set the Runner
   target (and `platform :ios` in `ios/Podfile`) to 15.0, add the block below to
   your app's `pubspec.yaml`, then run `flutter clean`:
@@ -168,7 +170,7 @@ final detector = AnimalDetector(
 );
 await detector.initialize();
 
-// Force GPU delegate (iOS recommended, Android experimental)
+// Force the GPU delegate (Metal on iOS and macOS; XNNPACK on Android since flutter_litert 4.0.0)
 final detector = AnimalDetector(
   performanceConfig: PerformanceConfig.gpu(),
 );
