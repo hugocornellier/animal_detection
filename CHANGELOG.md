@@ -1,4 +1,4 @@
-## 4.1.3
+## 4.2.0
 
 * Depend on `flutter_litert ^4.1.1` (was `^3.9.2`). This package's API is
   unchanged, but flutter_litert 4.x needs Android `minSdk` 24 and iOS 15.0,
